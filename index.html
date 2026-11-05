@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#03030a"><meta name="description" content="SEIF FLOW — تحكم بالطاقة والحركة عبر يديك">
+<title>SEIF FLOW — Control the Energy</title>
+<style>
+:root{--bg:#03030a;--panel:rgba(12,12,27,.78);--line:rgba(142,93,255,.22);--violet:#a66bff;--cyan:#56eaff;--muted:#8d8ba8;--white:#f4f1ff}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:Inter,"Segoe UI",Tahoma,Arial,sans-serif}body{background:radial-gradient(ellipse at 50% 48%,#100b27 0%,#060510 44%,#020207 100%)}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block}
+.hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(14px,2.5vw,30px);gap:12px}
+header,.bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:auto}
+.brand{display:flex;align-items:center;gap:12px}.mark{width:38px;height:38px;border:1px solid #8c5cff;border-radius:12px;display:grid;place-items:center;box-shadow:0 0 22px #7d42ff55;color:var(--cyan);font-size:20px}.brand strong{font-size:16px;letter-spacing:3px;display:block}.brand small{font-size:9px;color:#9a8abf;letter-spacing:1.5px}
+.pill{border:1px solid var(--line);background:rgba(8,8,20,.65);backdrop-filter:blur(12px);border-radius:30px;padding:9px 13px;font-size:11px;color:#b8b2d0;display:flex;align-items:center;gap:8px}
+.dot{width:7px;height:7px;border-radius:50%;background:#777;box-shadow:0 0 10px currentColor}.dot.live{background:#5affc1;color:#5affc1}
+.controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.btn{pointer-events:auto;border:1px solid #7350b9;background:rgba(25,15,48,.82);color:#eee8ff;border-radius:12px;padding:11px 16px;font-size:12px;cursor:pointer;transition:.2s;backdrop-filter:blur(12px)}.btn:hover{border-color:var(--cyan);box-shadow:0 0 18px #7c4cff55;transform:translateY(-1px)}.btn.primary{background:linear-gradient(110deg,#6d35c9,#245b88);border-color:#a77aff}.btn:disabled{opacity:.5;cursor:wait}
+.bottom{align-items:flex-end}.hint{max-width:290px;color:#aaa4c2;font-size:11px;line-height:1.8;background:rgba(8,8,20,.55);border:1px solid var(--line);padding:10px 14px;border-radius:13px;backdrop-filter:blur(10px)}
+.stats{display:flex;gap:8px;flex-wrap:wrap}.stat{min-width:84px;text-align:center;padding:9px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(8,8,20,.6);backdrop-filter:blur(10px)}.stat b{display:block;font-size:15px;color:var(--cyan);font-weight:600}.stat span{font-size:9px;color:var(--muted)}
+#video{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-10px;top:-10px}
+#message{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(390px,calc(100% - 36px));text-align:center;padding:22px;border:1px solid #8158c866;background:rgba(8,7,20,.88);border-radius:18px;backdrop-filter:blur(18px);box-shadow:0 0 55px #642fff22;pointer-events:none}
+#message h2{font-size:18px;letter-spacing:2px;margin:0 0 9px;color:#c7a7ff}#message p{font-size:12px;line-height:1.9;color:#b4aec9;margin:0}
+#message.hidden{display:none}
+#camPreview{position:fixed;left:18px;bottom:100px;width:110px;aspect-ratio:4/3;object-fit:cover;transform:scaleX(-1);border:1px solid #956aff66;border-radius:12px;opacity:0;transition:.3s;box-shadow:0 0 25px #6c39ff33}#camPreview.show{opacity:.42}
+@media(max-width:600px){.hud{padding:13px}.brand strong{font-size:13px}.pill{font-size:9px;padding:8px}.bottom{flex-direction:column-reverse;align-items:stretch}.hint{max-width:none;text-align:center}.stats{justify-content:center}.stat{flex:1;min-width:0}.btn{padding:10px 12px;font-size:11px}#camPreview{width:76px;bottom:150px;left:10px}}
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas><video id="video" playsinline muted></video><video id="camPreview" playsinline muted></video>
+<div class="hud">
+<header><div class="brand"><div class="mark">✧</div><div><strong>SEIF FLOW</strong><small>CONTROL THE ENERGY · SHAPE THE MOTION</small></div></div><div class="pill"><i id="statusDot" class="dot"></i><span id="status">النظام جاهز</span></div></header>
+<div class="controls"><button class="btn primary" id="start">تشغيل الكاميرا</button><button class="btn" id="pause">إيقاف التأثير</button><button class="btn" id="reset">إعادة ضبط</button><button class="btn" id="mirror">عكس العرض: تشغيل</button></div>
+<div class="bottom"><div class="hint" id="hint">ارفع يديك أمام الكاميرا لتبدأ التجربة.<br>افتح كفيك لنشر الطاقة، واقبضهما لجذب الخطوط إلى المركز.</div><div class="stats"><div class="stat"><b id="hands">0</b><span>الأيدي المكتشفة</span></div><div class="stat"><b id="gesture">—</b><span>الحركة</span></div><div class="stat"><b id="fps">60</b><span>إطار / ثانية</span></div></div></div>
+</div>
+<div id="message"><h2>SEIF FLOW</h2><p>عالم من مسارات الطاقة يستجيب لحركة يديك.<br>اضغط «تشغيل الكاميرا» واسمح بالوصول إليها.<br>تعمل الكاميرا محلياً داخل متصفحك.</p></div>
+<script type="module">
+import { FilesetResolver, HandLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const canvas=document.querySelector('#stage'),ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
+const video=document.querySelector('#video'),preview=document.querySelector('#camPreview');
+const $=id=>document.getElementById(id);
+let W=0,H=0,dpr=1,handTask=null,stream=null,running=false,paused=false,mirrored=true,lastDetect=0,lastVideoTime=-1,lastFrame=performance.now(),fpsSmooth=60;
+let hands=[],energy=0.48,spin=0,frame=0,quality=1;
+const TAU=Math.PI*2,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),lerp=(a,b,t)=>a+(b-a)*t;
+function resize(){W=innerWidth;H=innerHeight;dpr=Math.min(devicePixelRatio||1,1.5);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener('resize',resize);resize();
+const bones=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+const fingers=[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20]];
+const smoothHands=[];
+function point(lm){let x=mirrored?1-lm.x:lm.x;return {x:x*W,y:lm.y*H,z:lm.z||0}}
+function analyze(lm){const p=lm.map(point),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);const palm=Math.max(1,dist(p[0],p[9]));let extended=0;for(const tip of [8,12,16,20])if(dist(p[tip],p[0])>palm*1.22)extended++;const pinch=dist(p[4],p[8])<palm*.34;const openness=clamp((extended/4)*.78+(dist(p[4],p[0])/palm>.85?.22:0),0,1);return {p,pinch,openness,closed:openness<.28,center:{x:(p[0].x+p[9].x+p[5].x+p[17].x)/4,y:(p[0].y+p[9].y+p[5].y+p[17].y)/4}}}
+async function startCamera(){if(running)return;$('start').disabled=true;$('status').textContent='جارٍ تحميل التعرف على اليد';try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:960},height:{ideal:720},frameRate:{ideal:30,max:30}}});video.srcObject=stream;preview.srcObject=stream;await video.play();await preview.play().catch(()=>{});preview.classList.add('show');
+const vision=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+try{handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.5,minTrackingConfidence:.5})}catch(e){handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'CPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.5,minTrackingConfidence:.5})}
+running=true;$('message').classList.add('hidden');$('statusDot').classList.add('live');$('status').textContent='الكاميرا تعمل';$('start').textContent='الكاميرا تعمل';$('start').disabled=false;
+}catch(err){console.error(err);$('status').textContent='تعذر تشغيل الكاميرا';$('start').disabled=false;$('start').textContent='حاول مجدداً';$('hint').textContent=err.name==='NotAllowedError'?'يرجى السماح للمتصفح باستخدام الكاميرا.':'تأكد من فتح الموقع عبر HTTPS واستخدام متصفح يدعم الكاميرا.'}}
+$('start').addEventListener('click',startCamera);
+$('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'متابعة التأثير':'إيقاف التأثير'});
+$('reset').addEventListener('click',()=>{energy=.48;spin=0;hands=[]});
+$('mirror').addEventListener('click',()=>{mirrored=!mirrored;$('mirror').textContent='عكس العرض: '+(mirrored?'تشغيل':'إيقاف')});
+function glowLine(a,b,color,width=1,alpha=1){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=color;ctx.globalAlpha=alpha;ctx.lineWidth=width;ctx.shadowColor=color;ctx.shadowBlur=12;ctx.stroke();ctx.shadowBlur=0;ctx.globalAlpha=1}
+function drawHand(hand,index){const p=hand.p,main=index?'#59eaff':'#bd79ff',secondary=index?'#b4faff':'#e5c6ff';ctx.save();ctx.globalCompositeOperation='lighter';
+for(let j=0;j<bones.length;j++){const [a,b]=bones[j];glowLine(p[a],p[b],main,j===20?2.4:1.65,.92);}
+// Palm geometry and fine connecting web: the hand is drawn as articulated segments, not a single icon.
+for(let f=0;f<fingers.length;f++){const ids=fingers[f];for(let k=1;k<ids.length;k++){const a=p[ids[k-1]],b=p[ids[k]];const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo(mx+(index?3:-3),my-4,b.x,b.y);ctx.strokeStyle=secondary;ctx.globalAlpha=.26;ctx.lineWidth=3.4;ctx.shadowColor=main;ctx.shadowBlur=14;ctx.stroke();ctx.globalAlpha=1;}}
+for(let i=0;i<p.length;i++){const r=[4,8,12,16,20].includes(i)?3.7:2.35;ctx.beginPath();ctx.arc(p[i].x,p[i].y,r,0,TAU);ctx.fillStyle=i===0?'#fff':secondary;ctx.shadowColor=main;ctx.shadowBlur=15;ctx.fill();ctx.shadowBlur=0;}
+ctx.restore();
+}
+// Flowing filaments: a compact set of smooth, animated curves instead of thousands of particles.
+function drawEnergy(now){const count=Math.round(Math.min(62,Math.max(34,W/19))*quality);const cx=W/2,cy=H/2;let spread=energy;let targets=hands;
+if(targets.length){if(targets.length===2){const d=Math.hypot(targets[0].center.x-targets[1].center.x,targets[0].center.y-targets[1].center.y)/Math.max(W,H);spread=clamp(.22+d*1.25,.18,1.35)}else spread=.4+targets[0].openness*.9}
+energy=lerp(energy,spread,.045);spin+=.0035;
+ctx.save();ctx.globalCompositeOperation='lighter';
+for(let i=0;i<count;i++){const t=i/count,angle=t*TAU*3+spin*(i%2?1:-1),rad=(Math.min(W,H)*(.08+energy*.42))*(.55+.45*Math.sin(t*TAU*5+spin*2));let sx=cx+Math.cos(angle)*rad,sy=cy+Math.sin(angle)*rad*.62;let pull=0;
+if(targets.length){for(const h of targets){const dx=h.center.x-sx,dy=h.center.y-sy;const d=Math.hypot(dx,dy)+30;pull+=clamp(1-d/Math.max(W,H),0,.8)*(h.closed?-.5:.35);}}
+const wave=Math.sin(now*.0007+i*.28)*18;const ex=sx+Math.cos(angle+1.4)*(45+energy*95)+wave+pull*70,ey=sy+Math.sin(angle+1.4)*(38+energy*85)-wave*.7;
+const c=i%3===0?'#58eaff':i%3===1?'#a66bff':'#7548d7';ctx.beginPath();ctx.moveTo(sx,sy);ctx.bezierCurveTo(sx+Math.cos(angle+1)*75,sy+Math.sin(angle+1)*55,ex-Math.cos(angle)*65,ey-Math.sin(angle)*50,ex,ey);ctx.strokeStyle=c;ctx.globalAlpha=.25+.36*(.5+.5*Math.sin(now*.001+i));ctx.lineWidth=i%7===0?1.45:.65;ctx.shadowColor=c;ctx.shadowBlur=i%7===0?15:7;ctx.stroke();}
+ctx.restore();ctx.globalAlpha=1;
+}
+function draw(now){if(paused){requestAnimationFrame(draw);return}frame++;const dt=now-lastFrame;lastFrame=now;fpsSmooth=lerp(fpsSmooth,1000/Math.max(1,dt),.08);if(frame%12===0)$('fps').textContent=Math.round(fpsSmooth);
+ctx.fillStyle='rgba(2,2,9,.22)';ctx.fillRect(0,0,W,H);
+const g=ctx.createRadialGradient(W/2,H/2,10,W/2,H/2,Math.max(W,H)*.65);g.addColorStop(0,'rgba(22,11,52,.13)');g.addColorStop(1,'rgba(0,0,0,.08)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+drawEnergy(now);
+if(running&&handTask&&video.readyState>=2&&now-lastDetect>30&&video.currentTime!==lastVideoTime){lastDetect=now;lastVideoTime=video.currentTime;try{const res=handTask.detectForVideo(video,now);hands=(res.landmarks||[]).map(analyze);$('hands').textContent=hands.length;let label='—',hint='حرّك يديك لترى خطوط الطاقة تتبعك.';if(hands.some(h=>h.pinch)){label='ضمّ الأصابع';hint='ضم الإبهام والسبابة: تتجمع الخطوط وتلتف حول نقطة اللمس.'}else if(hands.length&&hands.every(h=>h.closed)){label='قبضة';hint='أغلقت يديك: تنهار مسارات الطاقة وتتجمع في المركز.'}else if(hands.length&&hands.some(h=>h.openness>.65)){label='كف مفتوح';hint='افتح كفك: تنتشر المسارات وتتوسع كموجة طاقة.'}else if(hands.length===2){label='يدان';hint='قرّب يديك أو أبعدهما لتغيير تمدد الشبكة بينهما.'}$('gesture').textContent=label;$('hint').textContent=hint;}catch(e){console.warn('hand tracking frame',e)}}
+for(let i=0;i<hands.length;i++)drawHand(hands[i],i);
+requestAnimationFrame(draw)}
+requestAnimationFrame(draw);
+addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());if(handTask)handTask.close()});
+</script>
+</body></html>
