@@ -135,29 +135,35 @@ if(mouseMode){const idle=performance.now()-lastMouseMove;if(idle>1400){mouseSpee
 if(!mouseMode){for(let i=0;i<hands.length;i++)drawHand(hands[i],i)}
 requestAnimationFrame(draw)}
 
-const mouseStrands=Array.from({length:100},(_,i)=>({
- x:innerWidth/2,y:innerHeight/2,
- speed:.008+((i*29)%101)*.00042,
- length:190+((i*43)%9)*29,phase:i*2.399,
- side:(i-49.5)*2.25,driftPhase:i*1.731
-}));
+// One hundred simple, straight neon filaments scattered across the whole screen.
+const mouseStrands=Array.from({length:100},(_,i)=>{
+ const length=22+Math.random()*34,angle=(Math.random()-.5)*.16;
+ const x=Math.random()*innerWidth,y=Math.random()*innerHeight;
+ return {x,y,homeX:x,homeY:y,vx:0,vy:0,length,angle,color:i%3};
+});
 function drawMouseEnergy(now){
- const angle=Math.atan2(-mouseVY,-mouseVX),dx=Math.cos(angle),dy=Math.sin(angle),px=-dy,py=dx;
- const colors=palettes[mousePalette],points=[{x:mouseX,y:mouseY}];
- if(dualMouse)points.push({x:W-mouseX,y:mouseY});
+ const colors=palettes[mousePalette],radius=76*mouseRadius;
  ctx.save();ctx.globalCompositeOperation='lighter';
- for(let pi=0;pi<points.length;pi++){const pt=points[pi];
-  for(let i=0;i<mouseStrands.length;i++){
-   const s=mouseStrands[i],state=pi===0?s:(s.dual||(s.dual={x:s.x,y:s.y})),lane=s.side*mouseRadius,offset=lane+Math.sin(now*.00055+s.driftPhase)*4.5;
-   const tx=pt.x+px*offset,ty=pt.y+py*offset;state.x+=(tx-state.x)*s.speed;state.y+=(ty-state.y)*s.speed;
-   const pull=mouseDown?Math.max(.2,1-Math.abs(s.side)/150):0;
-   const burst=now<burstUntil?Math.sin((1-(burstUntil-now)/420)*Math.PI)*burstPower:0;
-   const len=s.length*mouseRadius*(mouseDown?(.35+pull*.4):1)*(1+burst*.85),spread=burst*(18+(i%12)*3);
-   const sx=state.x+px*spread,sy=state.y+py*spread,ex=sx-dx*len,ey=sy-dy*len,color=colors[i%3];
-   ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.strokeStyle=color;ctx.globalAlpha=.28;ctx.lineWidth=4.2;ctx.shadowColor=color;ctx.shadowBlur=15;ctx.stroke();
-   ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.strokeStyle=color;ctx.globalAlpha=.58;ctx.lineWidth=1.55;ctx.shadowBlur=8;ctx.stroke();
-   ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.strokeStyle='#effcff';ctx.globalAlpha=.28;ctx.lineWidth=.42;ctx.shadowColor='#c8f8ff';ctx.shadowBlur=4;ctx.stroke();
+ for(let i=0;i<mouseStrands.length;i++){
+  const s=mouseStrands[i],dx=mouseX-s.x,dy=mouseY-s.y,dist=Math.hypot(dx,dy);
+  if(dist<radius){
+   // Nearby filaments are pulled toward the cursor like tiny magnetic needles.
+   const force=(1-dist/radius)*(.018+Math.min(mouseSpeed,24)*.0008);
+   s.vx+=dx*force;s.vy+=dy*force;
+   // A fast cursor leaves a short wake: nearby lines keep drifting behind it.
+   if(mouseSpeed>5){s.vx-=mouseVX*(mouseSpeed*.018)*(1-dist/radius);s.vy-=mouseVY*(mouseSpeed*.018)*(1-dist/radius)}
+  }else{
+   // When the cursor moves away, each line gently returns to its own place.
+   s.vx+=(s.homeX-s.x)*.0018;s.vy+=(s.homeY-s.y)*.0018;
   }
+  s.vx*=.91;s.vy*=.91;s.x+=s.vx;s.y+=s.vy;
+  const speed=Math.hypot(s.vx,s.vy),angle=s.angle+clamp(s.vx*.006,-.18,.18);
+  const half=s.length*.5,ax=Math.cos(angle)*half,ay=Math.sin(angle)*half;
+  const color=colors[s.color],alpha=dist<radius?.48: .34;
+  // Keep the appearance deliberately minimal: one thin, straight glowing stroke.
+  ctx.beginPath();ctx.moveTo(s.x-ax,s.y-ay);ctx.lineTo(s.x+ax,s.y+ay);
+  ctx.strokeStyle=color;ctx.globalAlpha=alpha;ctx.lineWidth=1.15+Math.min(speed*.035,.55);
+  ctx.shadowColor=color;ctx.shadowBlur=5;ctx.stroke();
  }
  ctx.restore();ctx.globalAlpha=1;ctx.shadowBlur=0;
 }
