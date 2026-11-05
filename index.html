@@ -101,47 +101,48 @@ if(mouseMode){const idle=performance.now()-lastMouseMove;if(idle>1400){mouseSpee
 if(!mouseMode){for(let i=0;i<hands.length;i++)drawHand(hands[i],i)}
 requestAnimationFrame(draw)}
 
+const mouseStrands=Array.from({length:30},(_,i)=>({
+ x:innerWidth/2,y:innerHeight/2,
+ speed:.018+(i%10)*.006+Math.floor(i/10)*.009,
+ angleOffset:((i%6)-2.5)*.075,
+ length:150+(i%7)*27,
+ phase:i*2.399,
+ side:(i-14.5)*5.2
+}));
 function drawMouseEnergy(now){
- // 100 separate, translucent glass-like light trails. They stay in a compact
- // flowing cloud around the cursor, with individual speeds and soft blur.
- const speed=clamp(mouseSpeed/20,0,1);
- const dir=Math.atan2(-mouseVY,-mouseVX);
+ // Thirty independent straight glass-light strands. Each has its own lag,
+ // speed, length and gentle drift; no shared mesh, braid, orb or curved web.
+ const vx=-mouseVX,vy=-mouseVY;
+ const baseAngle=Math.atan2(vy,vx);
  ctx.save();ctx.globalCompositeOperation='lighter';
- for(let i=0;i<100;i++){
-  const seed=i*78.233;
-  const r1=Math.sin(seed)*.5+.5;
-  const r2=Math.sin(seed*1.37+4.2)*.5+.5;
-  const r3=Math.sin(seed*.61+11.8)*.5+.5;
-  const r4=Math.sin(seed*2.11+2.7)*.5+.5;
-  // A compact, irregular distribution: distinct strands, but never a solid ball.
-  const angle=dir+(r1-.5)*1.35;
-  const sideX=-Math.sin(angle),sideY=Math.cos(angle);
-  const backX=Math.cos(angle),backY=Math.sin(angle);
-  const lateral=(r2-.5)*(24+speed*22);
-  const lag=18+r3*(65+speed*115);
-  const sx=mouseX-backX*lag+sideX*lateral;
-  const sy=mouseY-backY*lag+sideY*lateral;
-  const strandSpeed=.35+r4*2.4;
-  const length=(45+r1*125)*strandSpeed+speed*45;
-  const phase=now*(.0007+strandSpeed*.00065)+i*1.91;
-  const wave=Math.sin(phase)* (3+r2*8);
-  const endSide=(r3-.5)*18+wave;
-  const ex=sx+backX*length+sideX*endSide;
-  const ey=sy+backY*length+sideY*endSide;
-  const bendA=Math.sin(phase*.83+i)* (5+r1*15);
-  const bendB=Math.cos(phase*.67+i*.7)*(5+r2*17);
-  const c1x=sx+backX*length*.32+sideX*(bendA+lateral*.12);
-  const c1y=sy+backY*length*.32+sideY*(bendA+lateral*.12);
-  const c2x=sx+backX*length*.72+sideX*(bendB+endSide*.35);
-  const c2y=sy+backY*length*.72+sideY*(bendB+endSide*.35);
-  const color=i%4===0?'#65efff':i%4===1?'#b58aff':i%4===2?'#e1caff':'#8d6cff';
-  // Soft outer glow, then a very fine translucent glass core.
-  ctx.beginPath();ctx.moveTo(sx,sy);ctx.bezierCurveTo(c1x,c1y,c2x,c2y,ex,ey);
-  ctx.strokeStyle=color;ctx.globalAlpha=.10+r4*.12;ctx.lineWidth=1.15+r2*.9;
-  ctx.shadowColor=color;ctx.shadowBlur=9+r1*9;ctx.stroke();
-  ctx.beginPath();ctx.moveTo(sx,sy);ctx.bezierCurveTo(c1x,c1y,c2x,c2y,ex,ey);
-  ctx.strokeStyle='#eafcff';ctx.globalAlpha=.10+r3*.13;ctx.lineWidth=.28+r1*.22;
-  ctx.shadowColor='#a9efff';ctx.shadowBlur=4;ctx.stroke();
+ for(let i=0;i<mouseStrands.length;i++){
+  const s=mouseStrands[i];
+  const targetX=mouseX-mouseVX*(i%5)*3;
+  const targetY=mouseY-mouseVY*(i%5)*3;
+  s.x+=(targetX-s.x)*s.speed;
+  s.y+=(targetY-s.y)*s.speed;
+  const drift=Math.sin(now*.001+s.phase)*3.5;
+  const angle=baseAngle+s.angleOffset;
+  const dx=Math.cos(angle),dy=Math.sin(angle);
+  const px=-dy,py=dx;
+  const offset=s.side+drift;
+  const ex=s.x-dx*s.length;
+  const ey=s.y-dy*s.length;
+  const sx=s.x+px*offset;
+  const sy=s.y+py*offset;
+  const endX=ex+px*offset;
+  const endY=ey+py*offset;
+  const color=i%3===0?'#64efff':i%3===1?'#b68aff':'#e1caff';
+  // Broad, soft glass glow beneath a single straight, thicker filament.
+  ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(endX,endY);
+  ctx.strokeStyle=color;ctx.globalAlpha=.20;ctx.lineWidth=4.2;
+  ctx.shadowColor=color;ctx.shadowBlur=16;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(endX,endY);
+  ctx.strokeStyle=color;ctx.globalAlpha=.48;ctx.lineWidth=1.8;
+  ctx.shadowBlur=7;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(endX,endY);
+  ctx.strokeStyle='#f0fcff';ctx.globalAlpha=.28;ctx.lineWidth=.55;
+  ctx.shadowColor='#c8f8ff';ctx.shadowBlur=4;ctx.stroke();
  }
  ctx.restore();ctx.globalAlpha=1;ctx.shadowBlur=0;
 }
