@@ -45,7 +45,7 @@ body.active #message{display:none!important}
 <canvas id="stage"></canvas><video id="video" playsinline muted></video><video id="camPreview" playsinline muted></video>
 <div class="hud">
 <header><div class="brand"><div class="mark">✧</div><div><strong>SEIF FLOW</strong><small>CONTROL THE ENERGY · SHAPE THE MOTION</small></div></div><div class="pill"><i id="statusDot" class="dot"></i><span id="status">النظام جاهز</span></div></header>
-<div class="controls"><button class="btn primary" id="mouseStart" onclick="document.body.classList.add('active','mouse-mode');document.getElementById('message').classList.add('hidden')">ابدأ بالفأرة</button><button class="btn" id="start">تشغيل الكاميرا</button><button class="btn" id="pause">إيقاف التأثير</button><button class="btn" id="reset">إعادة ضبط</button><button class="btn" id="mirror">عكس العرض: تشغيل</button><button class="btn" id="dual">نقطة ثانية: إيقاف</button></div>
+<div class="controls"><button class="btn primary" id="mouseStart" onclick="document.body.classList.add('active','mouse-mode');document.getElementById('message').classList.add('hidden')">ابدأ بالفأرة</button><button class="btn" id="start">تشغيل الكاميرا</button><button class="btn" id="pause">إيقاف التأثير</button><button class="btn" id="reset">إعادة ضبط</button><button class="btn" id="mirror">عكس العرض: تشغيل</button><button class="btn" id="dual">نقطة ثانية: إيقاف</button><button class="btn" id="motion">تفعيل مستشعر الهاتف</button></div>
 <div class="bottom"><div class="hint" id="hint">ارفع يديك أمام الكاميرا لتبدأ التجربة.<br>افتح كفيك لنشر الطاقة، واقبضهما لجذب الخطوط إلى المركز.</div><div class="stats"><div class="stat"><b id="hands">0</b><span>الأيدي المكتشفة</span></div><div class="stat"><b id="gesture">—</b><span>الحركة</span></div><div class="stat"><b id="fps">60</b><span>إطار / ثانية</span></div></div></div>
 </div>
 <button id="panelToggle" type="button" aria-label="فتح لوحة التحكم">‹</button><div id="mouseCursor"></div>
@@ -57,6 +57,9 @@ const video=document.querySelector('#video'),preview=document.querySelector('#ca
 const $=id=>document.getElementById(id);
 let W=0,H=0,dpr=1,handTask=null,stream=null,running=false,paused=false,mirrored=true,lastDetect=0,lastVideoTime=-1,lastFrame=performance.now(),fpsSmooth=60;
 let hands=[],energy=0.48,spin=0,frame=0,quality=1;
+let tiltX=0,tiltY=0,targetTiltX=0,targetTiltY=0;
+function onDeviceTilt(e){targetTiltX=clamp((e.gamma||0)/45,-1,1)*85;targetTiltY=clamp((e.beta||0)/45,-1,1)*85;}
+async function enableDeviceMotion(){try{if(typeof DeviceOrientationEvent==='undefined')throw new Error('مستشعر الحركة غير مدعوم');if(typeof DeviceOrientationEvent.requestPermission==='function'){const permission=await DeviceOrientationEvent.requestPermission();if(permission!=='granted')throw new Error('لم يتم منح الإذن');}addEventListener('deviceorientation',onDeviceTilt);$('motion').textContent='مستشعر الهاتف يعمل';$('status').textContent='حرّك الهاتف مع يدك';}catch(err){$('status').textContent=err.message||'تعذر تفعيل مستشعر الهاتف';}}
 const TAU=Math.PI*2,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),lerp=(a,b,t)=>a+(b-a)*t;
 function resize(){W=innerWidth;H=innerHeight;dpr=1;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0)}
 addEventListener('resize',resize);resize();
@@ -70,7 +73,7 @@ function enterStage(){stageActive=true;document.body.classList.add('active');$('
 $('panelToggle').textContent='‹';document.body.classList.remove('drawer-open')
 function leaveStage(){stageActive=false;document.body.classList.remove('active')}
 document.body.classList.remove('drawer-open')
-function enableMouseMode(reason='وضع الفأرة'){mouseMode=true;running=true;hands=[];mouseTrail=[];document.body.classList.add('mouse-mode');enterStage();$('statusDot').classList.add('live');$('status').textContent=reason;$('start').textContent='تفعيل الكاميرا';$('start').disabled=false;$('hands').textContent='1';$('gesture').textContent='فأرة';$('hint').textContent='حرّك الفأرة لتوجيه 100 خيط نيون. اضغط باستمرار للجذب، واتركه لدفعة؛ السكرول لتغيير المجال، والزر الأيمن لتغيير اللون.'}
+function enableMouseMode(reason='وضع الفأرة'){mouseMode=true;running=true;hands=[];document.body.classList.add('mouse-mode');enterStage();$('statusDot').classList.add('live');$('status').textContent=reason;$('start').textContent='تفعيل الكاميرا';$('start').disabled=false;$('hands').textContent='1';$('gesture').textContent='فأرة';$('hint').textContent='حرّك الفأرة لتوجيه 100 خيط نيون. اضغط باستمرار للجذب، واتركه لدفعة؛ السكرول لتغيير المجال، والزر الأيمن لتغيير اللون.'}
 addEventListener('pointermove',e=>{const now=performance.now();const dx=e.clientX-mouseX,dy=e.clientY-mouseY;mouseSpeed=lerp(mouseSpeed,Math.hypot(dx,dy),.35);if(Math.hypot(dx,dy)>1){mouseVX=lerp(mouseVX,dx/Math.hypot(dx,dy),.35);mouseVY=lerp(mouseVY,dy/Math.hypot(dx,dy),.35)}mouseX=e.clientX;mouseY=e.clientY;lastMouseMove=now;const cursor=$('mouseCursor');cursor.style.left=mouseX+'px';cursor.style.top=mouseY+'px';if(mouseMode)updateMouseHand()});
 addEventListener('pointerdown',e=>{if(e.target.closest('button')||e.button!==0)return;mouseDown=true;if(mouseMode)updateMouseHand()});
 addEventListener('pointerup',e=>{if(e.button!==0)return;if(mouseDown){mouseDown=false;burstUntil=performance.now()+420;burstPower=1;if(mouseMode)updateMouseHand()}});addEventListener('contextmenu',e=>{if(mouseMode){e.preventDefault();mousePalette=(mousePalette+1)%palettes.length}});addEventListener('wheel',e=>{if(!mouseMode)return;e.preventDefault();mouseRadius=clamp(mouseRadius+(e.deltaY<0?.08:-.08),.45,2.1)},{passive:false});
@@ -88,6 +91,7 @@ running=true;enterStage();$('statusDot').classList.add('live');$('status').textC
 $('start').addEventListener('click',()=>startCamera());
 $('status').textContent='اختر طريقة التحكم';
 $('panelToggle').addEventListener('click',()=>{const open=document.body.classList.toggle('drawer-open');$('panelToggle').textContent=open?'›':'‹';$('panelToggle').setAttribute('aria-label',open?'إغلاق لوحة التحكم':'فتح لوحة التحكم')});$('mouseStart').addEventListener('click',()=>enableMouseMode('وضع الفأرة'));$('dual').addEventListener('click',()=>{dualMouse=!dualMouse;$('dual').textContent='نقطة ثانية: '+(dualMouse?'تشغيل':'إيقاف')});
+$('motion').addEventListener('click',enableDeviceMotion);
 
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'متابعة التأثير':'إيقاف التأثير'});
 $('reset').addEventListener('click',()=>{energy=.48;spin=0;hands=[]});
@@ -117,8 +121,8 @@ function drawHand(hand,index){
   const ballRadius=(hand.palmSize||85)*(.78+((i*17)%23)/100);
   const ballRoot={x:palmCenter.x+Math.cos(ballAngle)*ballRadius,y:palmCenter.y+Math.sin(ballAngle)*ballRadius};
   const ballEnd={x:palmCenter.x+Math.cos(ballAngle+Math.PI+.22*Math.sin(i*1.7))*ballRadius,y:palmCenter.y+Math.sin(ballAngle+Math.PI+.22*Math.sin(i*1.7))*ballRadius};
-  const rootTarget={x:lerp(handRoot.x,ballRoot.x,ballMix),y:lerp(handRoot.y,ballRoot.y,ballMix)};
-  const endTarget={x:lerp(handEnd.x,ballEnd.x,ballMix),y:lerp(handEnd.y,ballEnd.y,ballMix)};
+  const rootTarget={x:lerp(handRoot.x,ballRoot.x,ballMix)+tiltX*.32,y:lerp(handRoot.y,ballRoot.y,ballMix)+tiltY*.32};
+  const endTarget={x:lerp(handEnd.x,ballEnd.x,ballMix)+tiltX*.32,y:lerp(handEnd.y,ballEnd.y,ballMix)+tiltY*.32};
   // Unique speed and independent spring state for every single filament.
   const speed=.075+((i*37)%97)/150;
   let s=states[i];
@@ -136,12 +140,26 @@ function drawHand(hand,index){
   ctx.strokeStyle='#eafcff';ctx.globalAlpha=.16+(i%5)*.025;ctx.lineWidth=.32+width*.22;
   ctx.shadowColor='#b9f5ff';ctx.shadowBlur=4;ctx.stroke();
  }
+ // Visible floating particles around the tracked palm.
+ ctx.save();ctx.globalCompositeOperation='lighter';
+ for(let j=0;j<48;j++){
+  const a=j*2.3999632297+now*.00045*(1+(j%3));
+  const r=20+(j%12)*6+(1-hand.openness)*22;
+  const px=palmCenter.x+Math.cos(a)*r+tiltX*.4;
+  const py=palmCenter.y+Math.sin(a)*r+tiltY*.4;
+  const pulse=.55+.45*Math.sin(now*.004+j*1.7);
+  ctx.beginPath();ctx.arc(px,py,(j%6===0?2:1.1)*pulse,0,TAU);
+  ctx.fillStyle=j%3===0?secondary:main;ctx.globalAlpha=.25+.5*pulse;
+  ctx.shadowColor=main;ctx.shadowBlur=5;ctx.fill();
+ }
+ ctx.restore();
  ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.restore();
 }
 function draw(now){if(paused){requestAnimationFrame(draw);return}if(now-lastFrame<33){requestAnimationFrame(draw);return}frame++;const dt=now-lastFrame;lastFrame=now;fpsSmooth=lerp(fpsSmooth,1000/Math.max(1,dt),.08);if(frame%12===0)$('fps').textContent=Math.round(fpsSmooth);
 ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
 if(running&&handTask&&video.readyState>=2&&now-lastDetect>30&&video.currentTime!==lastVideoTime){lastDetect=now;lastVideoTime=video.currentTime;try{const res=handTask.detectForVideo(video,now);hands=(res.landmarks||[]).map(analyze);$('hands').textContent=hands.length;let label='—',hint='حرّك يديك لترى 250 خيطاً نيونياً زجاجياً يتبع شكل اليد والأصابع.';if(hands.some(h=>h.pinch)){label='ضمّ الأصابع';hint='ضم الإبهام والسبابة: تتجمع الخطوط وتلتف حول نقطة اللمس.'}else if(hands.length&&hands.every(h=>h.closed)){label='قبضة';hint='أغلقت يديك: تنهار مسارات الطاقة وتتجمع في المركز.'}else if(hands.length&&hands.some(h=>h.openness>.65)){label='كف مفتوح';hint='افتح كفك: تنتشر المسارات وتتوسع كموجة طاقة.'}else if(hands.length===2){label='يدان';hint='قرّب يديك أو أبعدهما لتغيير تمدد الشبكة بينهما.'}$('gesture').textContent=label;$('hint').textContent=hint;}catch(e){console.warn('hand tracking frame',e)}}
 if(mouseMode){const idle=performance.now()-lastMouseMove;if(idle>1400){mouseSpeed=lerp(mouseSpeed,0,.035)}drawMouseEnergy(now)}
+tiltX=lerp(tiltX,targetTiltX,.08);tiltY=lerp(tiltY,targetTiltY,.08);
 if(!mouseMode){for(let i=0;i<hands.length;i++)drawHand(hands[i],i)}
 requestAnimationFrame(draw)}
 
