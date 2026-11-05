@@ -92,14 +92,10 @@ for(let i=0;i<250;i++){
  if(i%5===0){const q=.48;const qx=(1-q)**3*root.x+3*(1-q)**2*q*c1.x+3*(1-q)*q*q*c2.x+q**3*end.x;const qy=(1-q)**3*root.y+3*(1-q)**2*q*c1.y+3*(1-q)*q*q*c2.y+q**3*end.y;ctx.beginPath();ctx.moveTo(qx-normalX*2.2,qy-normalY*2.2);ctx.lineTo(qx+normalX*2.2,qy+normalY*2.2);ctx.strokeStyle='#e6fbff';ctx.globalAlpha=.32;ctx.lineWidth=.55;ctx.shadowBlur=0;ctx.stroke();}
 }
 ctx.globalAlpha=1;ctx.shadowBlur=0;
-// Fine articulated joint glints, with no solid cartoon hand fill.
-for(let i=0;i<p.length;i++){ctx.beginPath();ctx.arc(p[i].x,p[i].y,[4,8,12,16,20].includes(i)?1.8:1.1,0,TAU);ctx.fillStyle=secondary;ctx.globalAlpha=.72;ctx.shadowColor=main;ctx.shadowBlur=0;ctx.fill();}
 ctx.restore();
 }
 function draw(now){if(paused){requestAnimationFrame(draw);return}if(now-lastFrame<33){requestAnimationFrame(draw);return}frame++;const dt=now-lastFrame;lastFrame=now;fpsSmooth=lerp(fpsSmooth,1000/Math.max(1,dt),.08);if(frame%12===0)$('fps').textContent=Math.round(fpsSmooth);
-ctx.fillStyle='rgba(2,2,9,.22)';ctx.fillRect(0,0,W,H);
-const g=ctx.createRadialGradient(W/2,H/2,10,W/2,H/2,Math.max(W,H)*.65);g.addColorStop(0,'rgba(22,11,52,.13)');g.addColorStop(1,'rgba(0,0,0,.08)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-drawEnergy(now);
+ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
 if(running&&handTask&&video.readyState>=2&&now-lastDetect>30&&video.currentTime!==lastVideoTime){lastDetect=now;lastVideoTime=video.currentTime;try{const res=handTask.detectForVideo(video,now);hands=(res.landmarks||[]).map(analyze);$('hands').textContent=hands.length;let label='—',hint='حرّك يديك لترى خطوط الطاقة تتبعك.';if(hands.some(h=>h.pinch)){label='ضمّ الأصابع';hint='ضم الإبهام والسبابة: تتجمع الخطوط وتلتف حول نقطة اللمس.'}else if(hands.length&&hands.every(h=>h.closed)){label='قبضة';hint='أغلقت يديك: تنهار مسارات الطاقة وتتجمع في المركز.'}else if(hands.length&&hands.some(h=>h.openness>.65)){label='كف مفتوح';hint='افتح كفك: تنتشر المسارات وتتوسع كموجة طاقة.'}else if(hands.length===2){label='يدان';hint='قرّب يديك أو أبعدهما لتغيير تمدد الشبكة بينهما.'}$('gesture').textContent=label;$('hint').textContent=hint;}catch(e){console.warn('hand tracking frame',e)}}
 if(mouseMode){const idle=performance.now()-lastMouseMove;if(idle>1400){mouseSpeed=lerp(mouseSpeed,0,.035)}drawMouseEnergy(now)}
 if(!mouseMode){for(let i=0;i<hands.length;i++)drawHand(hands[i],i)}
