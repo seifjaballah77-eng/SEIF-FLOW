@@ -32,6 +32,11 @@ header,.bottom{display:flex;align-items:center;justify-content:space-between;gap
 #message.hidden{display:none}
 #camPreview{position:fixed;left:18px;bottom:100px;width:110px;aspect-ratio:4/3;object-fit:cover;transform:scaleX(-1);border:1px solid #956aff66;border-radius:12px;opacity:0;transition:.3s;box-shadow:0 0 25px #6c39ff33}#camPreview.show{opacity:.42}
 @media(max-width:600px){.hud{padding:13px}.brand strong{font-size:13px}.pill{font-size:9px;padding:8px}.bottom{flex-direction:column-reverse;align-items:stretch}.hint{max-width:none;text-align:center}.stats{justify-content:center}.stat{flex:1;min-width:0}.btn{padding:10px 12px;font-size:11px}#camPreview{width:76px;bottom:150px;left:10px}}
+
+/* Force immersive mode to hide every HUD label/control; drawer is the only exception. */
+body.active:not(.drawer-open) .hud{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+body.active.drawer-open .hud{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+body.active #message{display:none!important}
 </style>
 </head>
 <body>
