@@ -78,7 +78,7 @@ const vision=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/
 try{handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.5,minTrackingConfidence:.5})}catch(e){handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'CPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.5,minTrackingConfidence:.5})}
 running=true;enterStage();$('statusDot').classList.add('live');$('status').textContent='الكاميرا تعمل';$('start').textContent='الكاميرا تعمل';$('start').disabled=false;
 }catch(err){console.error(err);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}enableMouseMode(err.name==='NotAllowedError'?'رفضت إذن الكاميرا · انتقلنا للفأرة':'الكاميرا غير متاحة · انتقلنا للفأرة');$('hint').textContent='لم تعمل الكاميرا؛ تحوّلنا تلقائياً إلى الفأرة. حرّك المؤشر، اضغط للجذب واتركه لإطلاق دفعة.'}}
-$('start').addEventListener('click',()=>{if(mouseMode){mouseMode=false;running=false;document.body.classList.remove('mouse-mode');hands=[];if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('statusDot').classList.remove('live');$('status').textContent='الكاميرا متوقفة';$('start').textContent='تشغيل الكاميرا';$('hands').textContent='0';$('gesture').textContent='—';return}startCamera()});
+$('start').addEventListener('click',()=>startCamera());
 $('status').textContent='اختر طريقة التحكم';
 $('panelToggle').addEventListener('click',()=>{const open=document.body.classList.toggle('drawer-open');$('panelToggle').textContent=open?'›':'‹';$('panelToggle').setAttribute('aria-label',open?'إغلاق لوحة التحكم':'فتح لوحة التحكم')});$('mouseStart').addEventListener('click',()=>enableMouseMode('وضع الفأرة'));$('dual').addEventListener('click',()=>{dualMouse=!dualMouse;$('dual').textContent='نقطة ثانية: '+(dualMouse?'تشغيل':'إيقاف')});
 
@@ -143,12 +143,12 @@ function drawMouseEnergy(now){
  ctx.save();ctx.globalCompositeOperation='lighter';
  for(let pi=0;pi<points.length;pi++){const pt=points[pi];
   for(let i=0;i<mouseStrands.length;i++){
-   const s=mouseStrands[i],lane=s.side*mouseRadius,offset=lane+Math.sin(now*.00055+s.driftPhase)*4.5;
-   const tx=pt.x+px*offset,ty=pt.y+py*offset;s.x+=(tx-s.x)*s.speed;s.y+=(ty-s.y)*s.speed;
+   const s=mouseStrands[i],state=pi===0?s:(s.dual||(s.dual={x:s.x,y:s.y})),lane=s.side*mouseRadius,offset=lane+Math.sin(now*.00055+s.driftPhase)*4.5;
+   const tx=pt.x+px*offset,ty=pt.y+py*offset;state.x+=(tx-state.x)*s.speed;state.y+=(ty-state.y)*s.speed;
    const pull=mouseDown?Math.max(.2,1-Math.abs(s.side)/150):0;
    const burst=now<burstUntil?Math.sin((1-(burstUntil-now)/420)*Math.PI)*burstPower:0;
    const len=s.length*mouseRadius*(mouseDown?(.35+pull*.4):1)*(1+burst*.85),spread=burst*(18+(i%12)*3);
-   const sx=s.x+px*spread,sy=s.y+py*spread,ex=sx-dx*len,ey=sy-dy*len,color=colors[i%3];
+   const sx=state.x+px*spread,sy=state.y+py*spread,ex=sx-dx*len,ey=sy-dy*len,color=colors[i%3];
    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.strokeStyle=color;ctx.globalAlpha=.28;ctx.lineWidth=4.2;ctx.shadowColor=color;ctx.shadowBlur=15;ctx.stroke();
    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.strokeStyle=color;ctx.globalAlpha=.58;ctx.lineWidth=1.55;ctx.shadowBlur=8;ctx.stroke();
    ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);ctx.strokeStyle='#effcff';ctx.globalAlpha=.28;ctx.lineWidth=.42;ctx.shadowColor='#c8f8ff';ctx.shadowBlur=4;ctx.stroke();
