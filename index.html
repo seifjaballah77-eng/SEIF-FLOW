@@ -138,7 +138,7 @@ if(!mouseMode){for(let i=0;i<hands.length;i++)drawHand(hands[i],i)}
 requestAnimationFrame(draw)}
 
 // One hundred simple, straight neon filaments scattered across the whole screen.
-const mouseStrands=Array.from({length:100},(_,i)=>{
+const mouseStrands=Array.from({length:200},(_,i)=>{
  const length=50+Math.random()*30,angle=(Math.random()-.5)*.16;
  const x=Math.random()*innerWidth,y=Math.random()*innerHeight;
  return {x,y,homeX:x,homeY:y,vx:0,vy:0,length,angle,color:i%3};
