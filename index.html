@@ -141,15 +141,15 @@ requestAnimationFrame(draw)}
 const mouseStrands=Array.from({length:500},(_,i)=>{
  const length=25+Math.random()*15,angle=(Math.random()-.5)*.16;
  const x=Math.random()*innerWidth,y=Math.random()*innerHeight;
- return {x,y,homeX:x,homeY:y,vx:0,vy:0,length,angle,color:i%3,bend:0,bendV:0};
+ return {x,y,homeX:x,homeY:y,vx:0,vy:0,length,angle,color:i%3,bend:0,bendV:0,phase:Math.random()*Math.PI*2,flow:Math.random()*Math.PI*2};
 });
 function drawMouseEnergy(now){
- const colors=palettes[mousePalette],radius=228*mouseRadius;
- ctx.save();ctx.globalCompositeOperation='source-over';
+ const colors=palettes[mousePalette],radius=228*mouseRadius,t=now*.001;
+ ctx.save();ctx.globalCompositeOperation='lighter';
+ ctx.lineCap='round';ctx.lineJoin='round';
  for(let i=0;i<mouseStrands.length;i++){
   const s=mouseStrands[i],dx=mouseX-s.x,dy=mouseY-s.y,dist=Math.hypot(dx,dy);
   if(dist<radius){
-   // Triple the magnetic pull and its reach.
    const force=(1-dist/radius)*3*(.018+Math.min(mouseSpeed,24)*.0008);
    s.vx+=dx*force;s.vy+=dy*force;
    if(mouseSpeed>5){s.vx-=mouseVX*(mouseSpeed*.018)*(1-dist/radius);s.vy-=mouseVY*(mouseSpeed*.018)*(1-dist/radius)}
@@ -157,18 +157,30 @@ function drawMouseEnergy(now){
    s.vx+=(s.homeX-s.x)*.0018;s.vy+=(s.homeY-s.y)*.0018;
   }
   s.vx*=.91;s.vy*=.91;s.x+=s.vx;s.y+=s.vy;
-  const speed=Math.hypot(s.vx,s.vy),angle=s.angle+clamp(s.vx*.006,-.18,.18);
-  // Flexible cord response: bend reacts to movement, then springs back smoothly.
-  const targetBend=clamp((s.vx*mouseVY-s.vy*mouseVX)*.75,-22,22);
-  s.bendV+=(targetBend-s.bend)*.12;
-  s.bendV*=.82;s.bend+=s.bendV;
+  const speed=Math.hypot(s.vx,s.vy);
+  const drift=t*1.7+s.phase;
+  const angle=s.angle+clamp(s.vx*.006,-.18,.18)+Math.sin(drift)*.12;
   const half=s.length*.5,ax=Math.cos(angle)*half,ay=Math.sin(angle)*half;
-  const color=colors[s.color],alpha=dist<radius?.62:.42;
-  const sag=s.length*.22;
-  ctx.beginPath();ctx.moveTo(s.x-ax,s.y-ay);
-  ctx.quadraticCurveTo(s.x+s.bend,s.y+sag+Math.abs(s.bend)*.12,s.x+ax,s.y+ay);
-  ctx.strokeStyle=color;ctx.globalAlpha=alpha;ctx.lineWidth=1.15;
-  ctx.shadowBlur=0;ctx.stroke();
+  const color=colors[s.color],near=clamp(1-dist/radius,0,1);
+  const sway=Math.sin(drift+s.flow)*(.8+speed*.12);
+  const bend= s.bend + sway*3 + clamp((s.vx*mouseVY-s.vy*mouseVX)*.45,-14,14);
+  const sag=Math.sin(drift*.72+s.flow)*s.length*.28;
+  const x1=s.x-ax,y1=s.y-ay,x2=s.x+ax,y2=s.y+ay;
+  // Flowing, translucent liquid filament: the curve keeps changing shape,
+  // with soft layered light instead of a stiff cord or a hard bright edge.
+  ctx.beginPath();ctx.moveTo(x1,y1);
+  ctx.bezierCurveTo(s.x-ax*.35+bend*.35,s.y-ay*.25+sag,
+                    s.x+ax*.35+bend,s.y+ay*.25-sag*.35,x2,y2);
+  ctx.strokeStyle=color;ctx.globalAlpha=.10+near*.13;ctx.lineWidth=4.2+near*2.2;
+  ctx.shadowColor=color;ctx.shadowBlur=9;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x1,y1);
+  ctx.bezierCurveTo(s.x-ax*.35+bend*.35,s.y-ay*.25+sag,
+                    s.x+ax*.35+bend,s.y+ay*.25-sag*.35,x2,y2);
+  ctx.strokeStyle=color;ctx.globalAlpha=.18+near*.2;ctx.lineWidth=.7+near*.35;
+  ctx.shadowBlur=3;ctx.stroke();
+  // The bend itself has a gentle spring, so the strands ripple rather than wobble rigidly.
+  const targetBend=clamp((s.vx*mouseVY-s.vy*mouseVX)*.55,-18,18);
+  s.bendV+=(targetBend-s.bend)*.08;s.bendV*=.86;s.bend+=s.bendV;
  }
  ctx.restore();ctx.globalAlpha=1;ctx.shadowBlur=0;
 }
