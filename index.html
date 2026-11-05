@@ -23,7 +23,7 @@ header,.bottom{display:flex;align-items:center;justify-content:space-between;gap
 .brand{display:flex;align-items:center;gap:12px}.mark{width:38px;height:38px;border:1px solid #8c5cff;border-radius:12px;display:grid;place-items:center;box-shadow:0 0 22px #7d42ff55;color:var(--cyan);font-size:20px}.brand strong{font-size:16px;letter-spacing:3px;display:block}.brand small{font-size:9px;color:#9a8abf;letter-spacing:1.5px}
 .pill{border:1px solid var(--line);background:rgba(8,8,20,.65);backdrop-filter:blur(12px);border-radius:30px;padding:9px 13px;font-size:11px;color:#b8b2d0;display:flex;align-items:center;gap:8px}
 .dot{width:7px;height:7px;border-radius:50%;background:#777;box-shadow:0 0 10px currentColor}.dot.live{background:#5affc1;color:#5affc1}
-.controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.btn{pointer-events:auto;border:1px solid #7350b9;background:rgba(25,15,48,.82);color:#eee8ff;border-radius:12px;padding:11px 16px;font-size:12px;cursor:pointer;transition:.2s;backdrop-filter:blur(12px)}.btn:hover{border-color:var(--cyan);box-shadow:0 0 18px #7c4cff55;transform:translateY(-1px)}.btn.primary{background:linear-gradient(110deg,#6d35c9,#245b88);border-color:#a77aff}body.active.mouse-mode{cursor:none}#mouseCursor{position:fixed;z-index:10;pointer-events:none;width:28px;height:28px;border:1px solid #9befff;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 12px #65eaff,0 0 28px #9c62ff,inset 0 0 12px #65eaff88;display:none}body.active.mouse-mode #mouseCursor{display:block}.btn:disabled{opacity:.5;cursor:wait}
+.controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.btn{pointer-events:auto;border:1px solid #7350b9;background:rgba(25,15,48,.82);color:#eee8ff;border-radius:12px;padding:11px 16px;font-size:12px;cursor:pointer;transition:.2s;backdrop-filter:blur(12px)}.btn:hover{border-color:var(--cyan);box-shadow:0 0 18px #7c4cff55;transform:translateY(-1px)}.btn.primary{background:linear-gradient(110deg,#6d35c9,#245b88);border-color:#a77aff}body.active.mouse-mode{cursor:none}#mouseCursor{position:fixed;z-index:10;pointer-events:none;width:22px;height:22px;border:1px solid #d9d9e2;border-radius:50%;transform:translate(-50%,-50%);box-shadow:none;background:transparent;display:none}body.active.mouse-mode #mouseCursor{display:block}.btn:disabled{opacity:.5;cursor:wait}
 .bottom{align-items:flex-end}.hint{max-width:290px;color:#aaa4c2;font-size:11px;line-height:1.8;background:rgba(8,8,20,.55);border:1px solid var(--line);padding:10px 14px;border-radius:13px;backdrop-filter:blur(10px)}
 .stats{display:flex;gap:8px;flex-wrap:wrap}.stat{min-width:84px;text-align:center;padding:9px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(8,8,20,.6);backdrop-filter:blur(10px)}.stat b{display:block;font-size:15px;color:var(--cyan);font-weight:600}.stat span{font-size:9px;color:var(--muted)}
 #video{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-10px;top:-10px}
@@ -144,28 +144,26 @@ const mouseStrands=Array.from({length:100},(_,i)=>{
  return {x,y,homeX:x,homeY:y,vx:0,vy:0,length,angle,color:i%3};
 });
 function drawMouseEnergy(now){
- const colors=palettes[mousePalette],radius=76*mouseRadius;
- ctx.save();ctx.globalCompositeOperation='lighter';
+ const colors=palettes[mousePalette],radius=228*mouseRadius;
+ ctx.save();ctx.globalCompositeOperation='source-over';
  for(let i=0;i<mouseStrands.length;i++){
   const s=mouseStrands[i],dx=mouseX-s.x,dy=mouseY-s.y,dist=Math.hypot(dx,dy);
   if(dist<radius){
-   // Nearby filaments are pulled toward the cursor like tiny magnetic needles.
-   const force=(1-dist/radius)*(.018+Math.min(mouseSpeed,24)*.0008);
+   // Triple the magnetic pull and its reach.
+   const force=(1-dist/radius)*3*(.018+Math.min(mouseSpeed,24)*.0008);
    s.vx+=dx*force;s.vy+=dy*force;
-   // A fast cursor leaves a short wake: nearby lines keep drifting behind it.
    if(mouseSpeed>5){s.vx-=mouseVX*(mouseSpeed*.018)*(1-dist/radius);s.vy-=mouseVY*(mouseSpeed*.018)*(1-dist/radius)}
   }else{
-   // When the cursor moves away, each line gently returns to its own place.
    s.vx+=(s.homeX-s.x)*.0018;s.vy+=(s.homeY-s.y)*.0018;
   }
   s.vx*=.91;s.vy*=.91;s.x+=s.vx;s.y+=s.vy;
   const speed=Math.hypot(s.vx,s.vy),angle=s.angle+clamp(s.vx*.006,-.18,.18);
   const half=s.length*.5,ax=Math.cos(angle)*half,ay=Math.sin(angle)*half;
-  const color=colors[s.color],alpha=dist<radius?.48: .34;
-  // Keep the appearance deliberately minimal: one thin, straight glowing stroke.
+  const color=colors[s.color],alpha=dist<radius?.62:.42;
+  // Plain, thin, straight coloured lines; no 2D/3D styling or decorative glow.
   ctx.beginPath();ctx.moveTo(s.x-ax,s.y-ay);ctx.lineTo(s.x+ax,s.y+ay);
-  ctx.strokeStyle=color;ctx.globalAlpha=alpha;ctx.lineWidth=1.15+Math.min(speed*.035,.55);
-  ctx.shadowColor=color;ctx.shadowBlur=5;ctx.stroke();
+  ctx.strokeStyle=color;ctx.globalAlpha=alpha;ctx.lineWidth=1.2;
+  ctx.shadowBlur=0;ctx.stroke();
  }
  ctx.restore();ctx.globalAlpha=1;ctx.shadowBlur=0;
 }
