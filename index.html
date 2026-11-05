@@ -138,10 +138,10 @@ if(!mouseMode){for(let i=0;i<hands.length;i++)drawHand(hands[i],i)}
 requestAnimationFrame(draw)}
 
 // One hundred simple, straight neon filaments scattered across the whole screen.
-const mouseStrands=Array.from({length:200},(_,i)=>{
- const length=50+Math.random()*30,angle=(Math.random()-.5)*.16;
+const mouseStrands=Array.from({length:500},(_,i)=>{
+ const length=25+Math.random()*15,angle=(Math.random()-.5)*.16;
  const x=Math.random()*innerWidth,y=Math.random()*innerHeight;
- return {x,y,homeX:x,homeY:y,vx:0,vy:0,length,angle,color:i%3};
+ return {x,y,homeX:x,homeY:y,vx:0,vy:0,length,angle,color:i%3,bend:0,bendV:0};
 });
 function drawMouseEnergy(now){
  const colors=palettes[mousePalette],radius=228*mouseRadius;
@@ -158,13 +158,16 @@ function drawMouseEnergy(now){
   }
   s.vx*=.91;s.vy*=.91;s.x+=s.vx;s.y+=s.vy;
   const speed=Math.hypot(s.vx,s.vy),angle=s.angle+clamp(s.vx*.006,-.18,.18);
+  // Flexible cord response: bend reacts to movement, then springs back smoothly.
+  const targetBend=clamp((s.vx*mouseVY-s.vy*mouseVX)*.75,-22,22);
+  s.bendV+=(targetBend-s.bend)*.12;
+  s.bendV*=.82;s.bend+=s.bendV;
   const half=s.length*.5,ax=Math.cos(angle)*half,ay=Math.sin(angle)*half;
   const color=colors[s.color],alpha=dist<radius?.62:.42;
-  // A tiny downward bow gives each filament the relaxed shape of a hanging cord.
-  const sag=clamp(s.length*.16,7,14);
+  const sag=s.length*.22;
   ctx.beginPath();ctx.moveTo(s.x-ax,s.y-ay);
-  ctx.quadraticCurveTo(s.x,s.y+sag,s.x+ax,s.y+ay);
-  ctx.strokeStyle=color;ctx.globalAlpha=alpha;ctx.lineWidth=1.2;
+  ctx.quadraticCurveTo(s.x+s.bend,s.y+sag+Math.abs(s.bend)*.12,s.x+ax,s.y+ay);
+  ctx.strokeStyle=color;ctx.globalAlpha=alpha;ctx.lineWidth=1.15;
   ctx.shadowBlur=0;ctx.stroke();
  }
  ctx.restore();ctx.globalAlpha=1;ctx.shadowBlur=0;
