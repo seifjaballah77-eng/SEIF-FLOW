@@ -83,6 +83,7 @@ if(running&&handTask&&video.readyState>=2&&now-lastDetect>30&&video.currentTime!
 for(let i=0;i<hands.length;i++)drawHand(hands[i],i);
 requestAnimationFrame(draw)}
 requestAnimationFrame(draw);
+if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Offline shell unavailable',err)));}
 addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());if(handTask)handTask.close()});
 </script>
 </body></html>
