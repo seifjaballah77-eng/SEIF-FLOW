@@ -47,12 +47,25 @@ const fingers=[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,1
 const smoothHands=[];
 function point(lm){let x=mirrored?1-lm.x:lm.x;return {x:x*W,y:lm.y*H,z:lm.z||0}}
 function analyze(lm){const p=lm.map(point),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);const palm=Math.max(1,dist(p[0],p[9]));let extended=0;for(const tip of [8,12,16,20])if(dist(p[tip],p[0])>palm*1.22)extended++;const pinch=dist(p[4],p[8])<palm*.34;const openness=clamp((extended/4)*.78+(dist(p[4],p[0])/palm>.85?.22:0),0,1);return {p,pinch,openness,closed:openness<.28,center:{x:(p[0].x+p[9].x+p[5].x+p[17].x)/4,y:(p[0].y+p[9].y+p[5].y+p[17].y)/4}}}
-async function startCamera(){if(running)return;$('start').disabled=true;$('status').textContent='جارٍ تحميل التعرف على اليد';try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:960},height:{ideal:720},frameRate:{ideal:30,max:30}}});video.srcObject=stream;preview.srcObject=stream;await video.play();await preview.play().catch(()=>{});preview.classList.add('show');
+let mouseMode=false,mouseX=W/2,mouseY=H/2,mouseDown=false,lastMouseMove=0,mouseSpeed=0,mousePinchUntil=0;
+function enableMouseMode(reason='وضع الفأرة'){mouseMode=true;running=true;hands=[];$('message').classList.add('hidden');$('statusDot').classList.add('live');$('status').textContent=reason;$('start').textContent='تفعيل الكاميرا';$('start').disabled=false;$('hands').textContent='1';$('gesture').textContent='فأرة';$('hint').textContent='حرّك الفأرة لتحريك اليد الرقمية. اضغط باستمرار لقبضها، وانقر نقرتين لضم الأصابع.'}
+addEventListener('pointermove',e=>{const now=performance.now();const dx=e.clientX-mouseX,dy=e.clientY-mouseY;mouseSpeed=lerp(mouseSpeed,Math.hypot(dx,dy),.35);mouseX=e.clientX;mouseY=e.clientY;lastMouseMove=now;if(mouseMode)updateMouseHand()});
+addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;mouseDown=true;if(mouseMode)updateMouseHand()});
+addEventListener('pointerup',()=>{mouseDown=false;if(mouseMode)updateMouseHand()});
+addEventListener('dblclick',()=>{if(mouseMode){mousePinchUntil=performance.now()+650;updateMouseHand()}});
+function updateMouseHand(){const now=performance.now(),palm=72,base={x:mouseX,y:mouseY};const closed=mouseDown;const pinch=now<mousePinchUntil;const spread=closed?.32:.95;const p=Array.from({length:21},()=>({x:base.x,y:base.y}));
+const wrist={x:base.x,y:base.y+48};p[0]=wrist;
+const fingersDef=[{ids:[1,2,3,4],x:-1.0,len:42},{ids:[5,6,7,8],x:-.48,len:66},{ids:[9,10,11,12],x:0,len:75},{ids:[13,14,15,16],x:.48,len:66},{ids:[17,18,19,20],x:.9,len:54}];
+for(let f=0;f<fingersDef.length;f++){const d=fingersDef[f],curl=closed?1.05:0;let prev=wrist;for(let j=0;j<4;j++){const t=(j+1)/4,angle=(-Math.PI/2)+(d.x*.65)+curl*t;let x=base.x+d.x*palm*(f===0?1.0:0.72)*spread*(1-t*.28)+Math.cos(angle)*d.len*t*(closed?.42:1);let y=base.y+48-d.len*t*(closed?.25:1)+Math.sin(curl*t)*17;if(f===0){x=base.x-40*t;y=base.y+28-22*t}if(pinch&&f===0){x=base.x-12*t;y=base.y-6*t}if(pinch&&f===1){x=base.x+9*t;y=base.y-7*t}const idx=d.ids[j];p[idx]={x,y};prev=p[idx]}}
+hands=[{p,pinch,openness:closed?.12:.88,closed,center:{x:base.x,y:base.y+8}}];$('gesture').textContent=pinch?'ضمّ الأصابع':closed?'قبضة':'فأرة';$('hands').textContent='1';}
+async function startCamera(){if(running&&!mouseMode)return;mouseMode=false;$('start').disabled=true;$('status').textContent='جارٍ تحميل التعرف على اليد';try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:960},height:{ideal:720},frameRate:{ideal:30,max:30}}});video.srcObject=stream;preview.srcObject=stream;await video.play();await preview.play().catch(()=>{});preview.classList.add('show');
 const vision=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
 try{handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.5,minTrackingConfidence:.5})}catch(e){handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'CPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.5,minTrackingConfidence:.5})}
 running=true;$('message').classList.add('hidden');$('statusDot').classList.add('live');$('status').textContent='الكاميرا تعمل';$('start').textContent='الكاميرا تعمل';$('start').disabled=false;
-}catch(err){console.error(err);$('status').textContent='تعذر تشغيل الكاميرا';$('start').disabled=false;$('start').textContent='حاول مجدداً';$('hint').textContent=err.name==='NotAllowedError'?'يرجى السماح للمتصفح باستخدام الكاميرا.':'تأكد من فتح الموقع عبر HTTPS واستخدام متصفح يدعم الكاميرا.'}}
-$('start').addEventListener('click',startCamera);
+}catch(err){console.error(err);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}enableMouseMode(err.name==='NotAllowedError'?'الكاميرا مرفوضة · وضع الفأرة':'الكاميرا غير متاحة · وضع الفأرة');$('hint').textContent='لم نتمكن من تشغيل الكاميرا، لذلك فعّلنا اليد الرقمية بالفأرة تلقائياً. '+$('hint').textContent}}
+$('start').addEventListener('click',()=>{if(mouseMode){mouseMode=false;running=false;hands=[];if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('statusDot').classList.remove('live');$('status').textContent='الكاميرا متوقفة';$('start').textContent='تشغيل الكاميرا';$('hands').textContent='0';$('gesture').textContent='—';return}startCamera()});
+enableMouseMode('وضع الفأرة · جاهز');
+
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'متابعة التأثير':'إيقاف التأثير'});
 $('reset').addEventListener('click',()=>{energy=.48;spin=0;hands=[]});
 $('mirror').addEventListener('click',()=>{mirrored=!mirrored;$('mirror').textContent='عكس العرض: '+(mirrored?'تشغيل':'إيقاف')});
@@ -80,8 +93,12 @@ ctx.fillStyle='rgba(2,2,9,.22)';ctx.fillRect(0,0,W,H);
 const g=ctx.createRadialGradient(W/2,H/2,10,W/2,H/2,Math.max(W,H)*.65);g.addColorStop(0,'rgba(22,11,52,.13)');g.addColorStop(1,'rgba(0,0,0,.08)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
 drawEnergy(now);
 if(running&&handTask&&video.readyState>=2&&now-lastDetect>30&&video.currentTime!==lastVideoTime){lastDetect=now;lastVideoTime=video.currentTime;try{const res=handTask.detectForVideo(video,now);hands=(res.landmarks||[]).map(analyze);$('hands').textContent=hands.length;let label='—',hint='حرّك يديك لترى خطوط الطاقة تتبعك.';if(hands.some(h=>h.pinch)){label='ضمّ الأصابع';hint='ضم الإبهام والسبابة: تتجمع الخطوط وتلتف حول نقطة اللمس.'}else if(hands.length&&hands.every(h=>h.closed)){label='قبضة';hint='أغلقت يديك: تنهار مسارات الطاقة وتتجمع في المركز.'}else if(hands.length&&hands.some(h=>h.openness>.65)){label='كف مفتوح';hint='افتح كفك: تنتشر المسارات وتتوسع كموجة طاقة.'}else if(hands.length===2){label='يدان';hint='قرّب يديك أو أبعدهما لتغيير تمدد الشبكة بينهما.'}$('gesture').textContent=label;$('hint').textContent=hint;}catch(e){console.warn('hand tracking frame',e)}}
+if(mouseMode){const idle=performance.now()-lastMouseMove;if(idle>1400){mouseSpeed=lerp(mouseSpeed,0,.035)}drawMouseTrails(now);if(!hands.length)updateMouseHand()}
 for(let i=0;i<hands.length;i++)drawHand(hands[i],i);
 requestAnimationFrame(draw)}
+let mouseTrail=[];
+function drawMouseTrails(now){mouseTrail.push({x:mouseX,y:mouseY,t:now});mouseTrail=mouseTrail.filter(p=>now-p.t<420);ctx.save();ctx.globalCompositeOperation='lighter';for(let i=1;i<mouseTrail.length;i++){const a=mouseTrail[i-1],b=mouseTrail[i],alpha=i/mouseTrail.length;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo((a.x+b.x)/2,(a.y+b.y)/2-10,b.x,b.y);ctx.strokeStyle='#a66bff';ctx.globalAlpha=alpha*.42;ctx.lineWidth=1+alpha*2;ctx.shadowColor='#a66bff';ctx.shadowBlur=12;ctx.stroke()}ctx.restore()}
+
 requestAnimationFrame(draw);
 if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Offline shell unavailable',err)));}
 addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());if(handTask)handTask.close()});
