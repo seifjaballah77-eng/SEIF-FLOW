@@ -28,7 +28,7 @@ header,.bottom{display:flex;align-items:center;justify-content:space-between;gap
 <canvas id="stage"></canvas><video id="video" playsinline muted></video><video id="camPreview" playsinline muted></video>
 <div class="hud">
 <header><div class="brand"><div class="mark">✧</div><div><strong>SEIF FLOW</strong><small>CONTROL THE ENERGY · SHAPE THE MOTION</small></div></div><div class="pill"><i id="statusDot" class="dot"></i><span id="status">النظام جاهز</span></div></header>
-<div class="controls"><button class="btn primary" id="start">تشغيل الكاميرا</button><button class="btn" id="pause">إيقاف التأثير</button><button class="btn" id="reset">إعادة ضبط</button><button class="btn" id="mirror">عكس العرض: تشغيل</button></div>
+<div class="controls"><button class="btn primary" id="mouseStart">ابدأ بالفأرة</button><button class="btn" id="start">تشغيل الكاميرا</button><button class="btn" id="pause">إيقاف التأثير</button><button class="btn" id="reset">إعادة ضبط</button><button class="btn" id="mirror">عكس العرض: تشغيل</button></div>
 <div class="bottom"><div class="hint" id="hint">ارفع يديك أمام الكاميرا لتبدأ التجربة.<br>افتح كفيك لنشر الطاقة، واقبضهما لجذب الخطوط إلى المركز.</div><div class="stats"><div class="stat"><b id="hands">0</b><span>الأيدي المكتشفة</span></div><div class="stat"><b id="gesture">—</b><span>الحركة</span></div><div class="stat"><b id="fps">60</b><span>إطار / ثانية</span></div></div></div>
 </div>
 <div id="message"><h2>SEIF FLOW</h2><p>عالم من مسارات الطاقة يستجيب لحركة يديك.<br>اضغط «تشغيل الكاميرا» واسمح بالوصول إليها.<br>تعمل الكاميرا محلياً داخل متصفحك.</p></div>
@@ -66,7 +66,7 @@ try{handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAs
 running=true;enterStage();$('statusDot').classList.add('live');$('status').textContent='الكاميرا تعمل';$('start').textContent='الكاميرا تعمل';$('start').disabled=false;
 }catch(err){console.error(err);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}enableMouseMode(err.name==='NotAllowedError'?'الكاميرا مرفوضة · وضع الفأرة':'الكاميرا غير متاحة · وضع الفأرة');$('hint').textContent='لم نتمكن من تشغيل الكاميرا، لذلك فعّلنا اليد الرقمية بالفأرة تلقائياً. '+$('hint').textContent}}
 $('start').addEventListener('click',()=>{if(mouseMode){mouseMode=false;running=false;hands=[];if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('statusDot').classList.remove('live');$('status').textContent='الكاميرا متوقفة';$('start').textContent='تشغيل الكاميرا';$('hands').textContent='0';$('gesture').textContent='—';return}startCamera()});
-enableMouseMode('وضع الفأرة · جاهز');
+$('status').textContent='اختر طريقة التحكم';$('mouseStart').addEventListener('click',()=>enableMouseMode('وضع الفأرة'));
 
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'متابعة التأثير':'إيقاف التأثير'});
 $('reset').addEventListener('click',()=>{energy=.48;spin=0;hands=[]});
