@@ -6,7 +6,17 @@
 <title>SEIF FLOW — Control the Energy</title>
 <style>
 :root{--bg:#03030a;--panel:rgba(12,12,27,.78);--line:rgba(142,93,255,.22);--violet:#a66bff;--cyan:#56eaff;--muted:#8d8ba8;--white:#f4f1ff}
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:Inter,"Segoe UI",Tahoma,Arial,sans-serif}body{background:#020207}.hud{transition:opacity .25s}body.active .hud{display:none}body.active #message{display:none}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:Inter,"Segoe UI",Tahoma,Arial,sans-serif}body{background:#020207}.hud{transition:opacity .25s}body.active .hud{display:none}
+body.active.drawer-open .hud{display:flex;inset:0 0 0 auto;width:min(360px,88vw);height:100dvh;overflow-y:auto;justify-content:flex-start;align-items:stretch;padding:22px 16px;background:rgba(5,4,15,.96);border-left:1px solid #9466ff66;box-shadow:-18px 0 55px #0009;backdrop-filter:blur(18px);z-index:20}
+body.active.drawer-open .hud header{align-items:flex-start;flex-wrap:wrap}
+body.active.drawer-open .hud .controls{flex-direction:column;align-items:stretch;justify-content:flex-start}
+body.active.drawer-open .hud .btn{width:100%}
+body.active.drawer-open .hud .bottom{flex-direction:column;align-items:stretch}
+body.active.drawer-open .hud .hint{max-width:none}
+#panelToggle{display:none;position:fixed;z-index:30;right:0;top:50%;transform:translateY(-50%);width:38px;height:58px;border:1px solid #a77aff;background:rgba(22,12,43,.94);color:#e9d8ff;border-radius:12px 0 0 12px;font-size:26px;cursor:pointer;box-shadow:0 0 20px #7d42ff55}
+body.active #panelToggle{display:block}
+body.active.drawer-open #panelToggle{right:min(360px,88vw)}
+body.active #message{display:none}
 #stage{position:fixed;inset:0;width:100%;height:100%;display:block}
 .hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(14px,2.5vw,30px);gap:12px}
 header,.bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:auto}
@@ -31,6 +41,7 @@ header,.bottom{display:flex;align-items:center;justify-content:space-between;gap
 <div class="controls"><button class="btn primary" id="mouseStart">ابدأ بالفأرة</button><button class="btn" id="start">تشغيل الكاميرا</button><button class="btn" id="pause">إيقاف التأثير</button><button class="btn" id="reset">إعادة ضبط</button><button class="btn" id="mirror">عكس العرض: تشغيل</button></div>
 <div class="bottom"><div class="hint" id="hint">ارفع يديك أمام الكاميرا لتبدأ التجربة.<br>افتح كفيك لنشر الطاقة، واقبضهما لجذب الخطوط إلى المركز.</div><div class="stats"><div class="stat"><b id="hands">0</b><span>الأيدي المكتشفة</span></div><div class="stat"><b id="gesture">—</b><span>الحركة</span></div><div class="stat"><b id="fps">60</b><span>إطار / ثانية</span></div></div></div>
 </div>
+<button id="panelToggle" type="button" aria-label="فتح لوحة التحكم">‹</button>
 <div id="message"><h2>SEIF FLOW</h2><p>عالم من مسارات الطاقة يستجيب لحركة يديك.<br>اضغط «تشغيل الكاميرا» واسمح بالوصول إليها.<br>تعمل الكاميرا محلياً داخل متصفحك.</p></div>
 <script type="module">
 import { FilesetResolver, HandLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
@@ -49,7 +60,9 @@ function point(lm){let x=mirrored?1-lm.x:lm.x;return {x:x*W,y:lm.y*H,z:lm.z||0}}
 function analyze(lm){const p=lm.map(point),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);const palm=Math.max(1,dist(p[0],p[9]));let extended=0;for(const tip of [8,12,16,20])if(dist(p[tip],p[0])>palm*1.22)extended++;const pinch=dist(p[4],p[8])<palm*.34;const openness=clamp((extended/4)*.78+(dist(p[4],p[0])/palm>.85?.22:0),0,1);return {p,pinch,openness,closed:openness<.28,center:{x:(p[0].x+p[9].x+p[5].x+p[17].x)/4,y:(p[0].y+p[9].y+p[5].y+p[17].y)/4}}}
 let mouseMode=false,stageActive=false,mouseX=W/2,mouseY=H/2,mouseDown=false,lastMouseMove=0,mouseSpeed=0,mouseVX=1,mouseVY=0,mousePinchUntil=0;
 function enterStage(){stageActive=true;document.body.classList.add('active');$('message').classList.add('hidden')}
+$('panelToggle').textContent='‹';document.body.classList.remove('drawer-open')
 function leaveStage(){stageActive=false;document.body.classList.remove('active')}
+document.body.classList.remove('drawer-open')
 function enableMouseMode(reason='وضع الفأرة'){mouseMode=true;running=true;hands=[];mouseTrail=[];enterStage();$('statusDot').classList.add('live');$('status').textContent=reason;$('start').textContent='تفعيل الكاميرا';$('start').disabled=false;$('hands').textContent='1';$('gesture').textContent='فأرة';$('hint').textContent='حرّك الفأرة لتسحب خلفها خيوط نيونية طويلة ومتوازية؛ لا توجد كرة أو مجسم يتبع المؤشر.'}
 addEventListener('pointermove',e=>{const now=performance.now();const dx=e.clientX-mouseX,dy=e.clientY-mouseY;mouseSpeed=lerp(mouseSpeed,Math.hypot(dx,dy),.35);if(Math.hypot(dx,dy)>1){mouseVX=lerp(mouseVX,dx/Math.hypot(dx,dy),.35);mouseVY=lerp(mouseVY,dy/Math.hypot(dx,dy),.35)}mouseX=e.clientX;mouseY=e.clientY;lastMouseMove=now;if(mouseMode)updateMouseHand()});
 addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;mouseDown=true;if(mouseMode)updateMouseHand()});
@@ -66,7 +79,8 @@ try{handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAs
 running=true;enterStage();$('statusDot').classList.add('live');$('status').textContent='الكاميرا تعمل';$('start').textContent='الكاميرا تعمل';$('start').disabled=false;
 }catch(err){console.error(err);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}enableMouseMode(err.name==='NotAllowedError'?'الكاميرا مرفوضة · وضع الفأرة':'الكاميرا غير متاحة · وضع الفأرة');$('hint').textContent='لم نتمكن من تشغيل الكاميرا، لذلك فعّلنا اليد الرقمية بالفأرة تلقائياً. '+$('hint').textContent}}
 $('start').addEventListener('click',()=>{if(mouseMode){mouseMode=false;running=false;hands=[];if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('statusDot').classList.remove('live');$('status').textContent='الكاميرا متوقفة';$('start').textContent='تشغيل الكاميرا';$('hands').textContent='0';$('gesture').textContent='—';return}startCamera()});
-$('status').textContent='اختر طريقة التحكم';$('mouseStart').addEventListener('click',()=>enableMouseMode('وضع الفأرة'));
+$('status').textContent='اختر طريقة التحكم';
+$('panelToggle').addEventListener('click',()=>{const open=document.body.classList.toggle('drawer-open');$('panelToggle').textContent=open?'›':'‹';$('panelToggle').setAttribute('aria-label',open?'إغلاق لوحة التحكم':'فتح لوحة التحكم')});$('mouseStart').addEventListener('click',()=>enableMouseMode('وضع الفأرة'));
 
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'متابعة التأثير':'إيقاف التأثير'});
 $('reset').addEventListener('click',()=>{energy=.48;spin=0;hands=[]});
@@ -103,46 +117,29 @@ requestAnimationFrame(draw)}
 
 const mouseStrands=Array.from({length:30},(_,i)=>({
  x:innerWidth/2,y:innerHeight/2,
- speed:.018+(i%10)*.006+Math.floor(i/10)*.009,
- angleOffset:((i%6)-2.5)*.075,
- length:150+(i%7)*27,
- phase:i*2.399,
- side:(i-14.5)*5.2
+ speed:.012+(i%10)*.0038+Math.floor(i/10)*.0045,
+ length:205+(i%6)*24,phase:i*2.399,side:(i-14.5)*6.4
 }));
 function drawMouseEnergy(now){
- // Thirty independent straight glass-light strands. Each has its own lag,
- // speed, length and gentle drift; no shared mesh, braid, orb or curved web.
- const vx=-mouseVX,vy=-mouseVY;
- const baseAngle=Math.atan2(vy,vx);
+ // 30 distinct, straight, thick glass filaments in separate lanes.
+ // Each strand independently catches up to its own target at its own speed.
+ const angle=Math.atan2(-mouseVY,-mouseVX);
+ const dx=Math.cos(angle),dy=Math.sin(angle),px=-dy,py=dx;
  ctx.save();ctx.globalCompositeOperation='lighter';
- for(let i=0;i<mouseStrands.length;i++){
-  const s=mouseStrands[i];
-  const targetX=mouseX-mouseVX*(i%5)*3;
-  const targetY=mouseY-mouseVY*(i%5)*3;
-  s.x+=(targetX-s.x)*s.speed;
-  s.y+=(targetY-s.y)*s.speed;
-  const drift=Math.sin(now*.001+s.phase)*3.5;
-  const angle=baseAngle+s.angleOffset;
-  const dx=Math.cos(angle),dy=Math.sin(angle);
-  const px=-dy,py=dx;
-  const offset=s.side+drift;
-  const ex=s.x-dx*s.length;
-  const ey=s.y-dy*s.length;
-  const sx=s.x+px*offset;
-  const sy=s.y+py*offset;
-  const endX=ex+px*offset;
-  const endY=ey+py*offset;
+ for(let i=0;i<30;i++){
+  const s=mouseStrands[i],lane=s.side;
+  const targetX=mouseX+px*lane,targetY=mouseY+py*lane;
+  s.x+=(targetX-s.x)*s.speed;s.y+=(targetY-s.y)*s.speed;
+  const drift=Math.sin(now*.0008+s.phase)*1.8;
+  const sx=s.x+px*(lane+drift),sy=s.y+py*(lane+drift);
+  const ex=sx-dx*s.length,ey=sy-dy*s.length;
   const color=i%3===0?'#64efff':i%3===1?'#b68aff':'#e1caff';
-  // Broad, soft glass glow beneath a single straight, thicker filament.
-  ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(endX,endY);
-  ctx.strokeStyle=color;ctx.globalAlpha=.20;ctx.lineWidth=4.2;
-  ctx.shadowColor=color;ctx.shadowBlur=16;ctx.stroke();
-  ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(endX,endY);
-  ctx.strokeStyle=color;ctx.globalAlpha=.48;ctx.lineWidth=1.8;
-  ctx.shadowBlur=7;ctx.stroke();
-  ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(endX,endY);
-  ctx.strokeStyle='#f0fcff';ctx.globalAlpha=.28;ctx.lineWidth=.55;
-  ctx.shadowColor='#c8f8ff';ctx.shadowBlur=4;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);
+  ctx.strokeStyle=color;ctx.globalAlpha=.24;ctx.lineWidth=6.2;ctx.shadowColor=color;ctx.shadowBlur=19;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);
+  ctx.strokeStyle=color;ctx.globalAlpha=.55;ctx.lineWidth=2.6;ctx.shadowBlur=10;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);
+  ctx.strokeStyle='#effcff';ctx.globalAlpha=.34;ctx.lineWidth=.7;ctx.shadowColor='#c8f8ff';ctx.shadowBlur=6;ctx.stroke();
  }
  ctx.restore();ctx.globalAlpha=1;ctx.shadowBlur=0;
 }
