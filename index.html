@@ -71,10 +71,27 @@ $('reset').addEventListener('click',()=>{energy=.48;spin=0;hands=[]});
 $('mirror').addEventListener('click',()=>{mirrored=!mirrored;$('mirror').textContent='عكس العرض: '+(mirrored?'تشغيل':'إيقاف')});
 function glowLine(a,b,color,width=1,alpha=1){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=color;ctx.globalAlpha=alpha;ctx.lineWidth=width;ctx.shadowColor=color;ctx.shadowBlur=12;ctx.stroke();ctx.shadowBlur=0;ctx.globalAlpha=1}
 function drawHand(hand,index){const p=hand.p,main=index?'#59eaff':'#bd79ff',secondary=index?'#b4faff':'#e5c6ff';ctx.save();ctx.globalCompositeOperation='lighter';
-for(let j=0;j<bones.length;j++){const [a,b]=bones[j];glowLine(p[a],p[b],main,j===20?2.4:1.65,.92);}
-// Palm geometry and fine connecting web: the hand is drawn as articulated segments, not a single icon.
-for(let f=0;f<fingers.length;f++){const ids=fingers[f];for(let k=1;k<ids.length;k++){const a=p[ids[k-1]],b=p[ids[k]];const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo(mx+(index?3:-3),my-4,b.x,b.y);ctx.strokeStyle=secondary;ctx.globalAlpha=.26;ctx.lineWidth=3.4;ctx.shadowColor=main;ctx.shadowBlur=14;ctx.stroke();ctx.globalAlpha=1;}}
-for(let i=0;i<p.length;i++){const r=[4,8,12,16,20].includes(i)?3.7:2.35;ctx.beginPath();ctx.arc(p[i].x,p[i].y,r,0,TAU);ctx.fillStyle=i===0?'#fff':secondary;ctx.shadowColor=main;ctx.shadowBlur=15;ctx.fill();ctx.shadowBlur=0;}
+// 250 crystalline neon filaments per hand. Each strand follows the live joint skeleton.
+const paths=[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20]];
+const palmCenter={x:(p[0].x+p[5].x+p[9].x+p[13].x+p[17].x)/5,y:(p[0].y+p[5].y+p[9].y+p[13].y+p[17].y)/5};
+for(let i=0;i<250;i++){
+ const finger=i%5,lane=Math.floor(i/5),path=paths[finger],u=(lane+.5)/50;
+ const base=p[path[1]],tip=p[path[4]],root={x:lerp(palmCenter.x,base.x,.22+u*.55),y:lerp(palmCenter.y,base.y,.22+u*.55)};
+ const endT=.24+u*.76,seg=endT*3,segI=Math.min(2,Math.floor(seg)),segT=seg-segI;
+ const end={x:lerp(p[path[segI+1]].x,p[path[segI+2]].x,segT),y:lerp(p[path[segI+1]].y,p[path[segI+2]].y,segT)};
+ const dx=end.x-root.x,dy=end.y-root.y,normalX=-dy/(Math.hypot(dx,dy)||1),normalY=dx/(Math.hypot(dx,dy)||1);
+ const bend=(Math.sin(i*12.9898+frame*.012)*.5)*((finger===0||finger===4)?10:6);
+ const c1={x:root.x+dx*.28+normalX*bend,y:root.y+dy*.28+normalY*bend};
+ const c2={x:root.x+dx*.72-normalX*bend*.65,y:root.y+dy*.72-normalY*bend*.65};
+ const hue=i%5===0?secondary:main,alpha=.2+(lane%9)/15;
+ ctx.beginPath();ctx.moveTo(root.x,root.y);ctx.bezierCurveTo(c1.x,c1.y,c2.x,c2.y,end.x,end.y);
+ ctx.strokeStyle=hue;ctx.globalAlpha=alpha;ctx.lineWidth=i%10===0?1.05:.48;ctx.shadowColor=hue;ctx.shadowBlur=i%10===0?13:5;ctx.stroke();
+ // Tiny crystalline cross-links create a faceted, glass-fibre appearance.
+ if(i%5===0){const q=.48;const qx=(1-q)**3*root.x+3*(1-q)**2*q*c1.x+3*(1-q)*q*q*c2.x+q**3*end.x;const qy=(1-q)**3*root.y+3*(1-q)**2*q*c1.y+3*(1-q)*q*q*c2.y+q**3*end.y;ctx.beginPath();ctx.moveTo(qx-normalX*2.2,qy-normalY*2.2);ctx.lineTo(qx+normalX*2.2,qy+normalY*2.2);ctx.strokeStyle='#e6fbff';ctx.globalAlpha=.32;ctx.lineWidth=.55;ctx.shadowBlur=8;ctx.stroke();}
+}
+ctx.globalAlpha=1;ctx.shadowBlur=0;
+// Fine articulated joint glints, with no solid cartoon hand fill.
+for(let i=0;i<p.length;i++){ctx.beginPath();ctx.arc(p[i].x,p[i].y,[4,8,12,16,20].includes(i)?1.8:1.1,0,TAU);ctx.fillStyle=secondary;ctx.globalAlpha=.72;ctx.shadowColor=main;ctx.shadowBlur=9;ctx.fill();}
 ctx.restore();
 }
 // Flowing filaments: a compact set of smooth, animated curves instead of thousands of particles.
