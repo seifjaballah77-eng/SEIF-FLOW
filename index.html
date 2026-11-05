@@ -57,7 +57,7 @@ const bones=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11
 const fingers=[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20]];
 const smoothHands=[];
 function point(lm){let x=mirrored?1-lm.x:lm.x;return {x:x*W,y:lm.y*H,z:lm.z||0}}
-function analyze(lm){const p=lm.map(point),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);const palm=Math.max(1,dist(p[0],p[9]));let extended=0;for(const tip of [8,12,16,20])if(dist(p[tip],p[0])>palm*1.22)extended++;const pinch=dist(p[4],p[8])<palm*.34;const openness=clamp((extended/4)*.78+(dist(p[4],p[0])/palm>.85?.22:0),0,1);return {p,pinch,openness,closed:openness<.28,center:{x:(p[0].x+p[9].x+p[5].x+p[17].x)/4,y:(p[0].y+p[9].y+p[5].y+p[17].y)/4}}}
+function analyze(lm){const p=lm.map(point),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);const palm=Math.max(1,dist(p[0],p[9]));let extended=0;for(const tip of [8,12,16,20])if(dist(p[tip],p[0])>palm*1.22)extended++;const pinch=dist(p[4],p[8])<palm*.34;const openness=clamp((extended/4)*.78+(dist(p[4],p[0])/palm>.85?.22:0),0,1);return {p,pinch,openness,closed:openness<.28,palmSize:palm,center:{x:(p[0].x+p[9].x+p[5].x+p[17].x)/4,y:(p[0].y+p[9].y+p[5].y+p[17].y)/4}}}
 let mouseMode=false,stageActive=false,mouseX=W/2,mouseY=H/2,mouseDown=false,lastMouseMove=0,mouseSpeed=0,mouseVX=1,mouseVY=0,mousePinchUntil=0;
 function enterStage(){stageActive=true;document.body.classList.add('active');$('message').classList.add('hidden')}
 $('panelToggle').textContent='‹';document.body.classList.remove('drawer-open')
@@ -86,27 +86,42 @@ $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=p
 $('reset').addEventListener('click',()=>{energy=.48;spin=0;hands=[]});
 $('mirror').addEventListener('click',()=>{mirrored=!mirrored;$('mirror').textContent='عكس العرض: '+(mirrored?'تشغيل':'إيقاف')});
 function glowLine(a,b,color,width=1,alpha=1){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=color;ctx.globalAlpha=alpha;ctx.lineWidth=width;ctx.shadowColor=color;ctx.shadowBlur=12;ctx.stroke();ctx.shadowBlur=0;ctx.globalAlpha=1}
-function drawHand(hand,index){const p=hand.p,main=index?'#59eaff':'#bd79ff',secondary=index?'#b4faff':'#e5c6ff';ctx.save();ctx.globalCompositeOperation='lighter';
-// 250 crystalline neon filaments per hand. Each strand follows the live joint skeleton.
-const paths=[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20]];
-const palmCenter={x:(p[0].x+p[5].x+p[9].x+p[13].x+p[17].x)/5,y:(p[0].y+p[5].y+p[9].y+p[13].y+p[17].y)/5};
-for(let i=0;i<250;i++){
- const finger=i%5,lane=Math.floor(i/5),path=paths[finger],u=(lane+.5)/50;
- const base=p[path[1]],tip=p[path[4]],root={x:lerp(palmCenter.x,base.x,.22+u*.55),y:lerp(palmCenter.y,base.y,.22+u*.55)};
- const endT=.24+u*.76,seg=endT*3,segI=Math.min(2,Math.floor(seg)),segT=seg-segI;
- const end={x:lerp(p[path[segI+1]].x,p[path[segI+2]].x,segT),y:lerp(p[path[segI+1]].y,p[path[segI+2]].y,segT)};
- const dx=end.x-root.x,dy=end.y-root.y,normalX=-dy/(Math.hypot(dx,dy)||1),normalY=dx/(Math.hypot(dx,dy)||1);
- const bend=(Math.sin(i*12.9898+frame*.012)*.5)*((finger===0||finger===4)?10:6);
- const c1={x:root.x+dx*.28+normalX*bend,y:root.y+dy*.28+normalY*bend};
- const c2={x:root.x+dx*.72-normalX*bend*.65,y:root.y+dy*.72-normalY*bend*.65};
- const hue=i%5===0?secondary:main,alpha=.2+(lane%9)/15;
- ctx.beginPath();ctx.moveTo(root.x,root.y);ctx.bezierCurveTo(c1.x,c1.y,c2.x,c2.y,end.x,end.y);
- ctx.strokeStyle=hue;ctx.globalAlpha=alpha;ctx.lineWidth=i%10===0?1.05:.48;ctx.shadowColor=hue;ctx.shadowBlur=0;ctx.stroke();
- // Tiny crystalline cross-links create a faceted, glass-fibre appearance.
- if(i%5===0){const q=.48;const qx=(1-q)**3*root.x+3*(1-q)**2*q*c1.x+3*(1-q)*q*q*c2.x+q**3*end.x;const qy=(1-q)**3*root.y+3*(1-q)**2*q*c1.y+3*(1-q)*q*q*c2.y+q**3*end.y;ctx.beginPath();ctx.moveTo(qx-normalX*2.2,qy-normalY*2.2);ctx.lineTo(qx+normalX*2.2,qy+normalY*2.2);ctx.strokeStyle='#e6fbff';ctx.globalAlpha=.32;ctx.lineWidth=.55;ctx.shadowBlur=0;ctx.stroke();}
-}
-ctx.globalAlpha=1;ctx.shadowBlur=0;
-ctx.restore();
+const handStrandMotion=[[],[]];
+function drawHand(hand,index){
+ const p=hand.p,main=index?'#59eaff':'#bd79ff',secondary=index?'#b4faff':'#e5c6ff';
+ ctx.save();ctx.globalCompositeOperation='lighter';
+ const paths=[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20]];
+ const palmCenter={x:(p[0].x+p[5].x+p[9].x+p[13].x+p[17].x)/5,y:(p[0].y+p[5].y+p[9].y+p[13].y+p[17].y)/5};
+ // A larger detected palm means the hand is physically nearer the camera.
+ // Scale each strand around the palm independently instead of moving them as a block.
+ const depthScale=clamp((hand.palmSize||85)/85,.72,1.85);
+ const states=handStrandMotion[index];
+ for(let i=0;i<250;i++){
+  const finger=i%5,lane=Math.floor(i/5),path=paths[finger],u=(lane+.5)/50;
+  const base=p[path[1]];
+  const root0={x:lerp(palmCenter.x,base.x,.22+u*.55),y:lerp(palmCenter.y,base.y,.22+u*.55)};
+  const endT=.24+u*.76,seg=endT*3,segI=Math.min(2,Math.floor(seg)),segT=seg-segI;
+  const end0={x:lerp(p[path[segI+1]].x,p[path[segI+2]].x,segT),y:lerp(p[path[segI+1]].y,p[path[segI+2]].y,segT)};
+  const rootTarget={x:palmCenter.x+(root0.x-palmCenter.x)*depthScale,y:palmCenter.y+(root0.y-palmCenter.y)*depthScale};
+  const endTarget={x:palmCenter.x+(end0.x-palmCenter.x)*depthScale,y:palmCenter.y+(end0.y-palmCenter.y)*depthScale};
+  // Unique speed and independent spring state for every single filament.
+  const speed=.075+((i*37)%97)/150;
+  let s=states[i];
+  if(!s){s={rx:rootTarget.x,ry:rootTarget.y,ex:endTarget.x,ey:endTarget.y};states[i]=s}
+  s.rx+=(rootTarget.x-s.rx)*speed;s.ry+=(rootTarget.y-s.ry)*speed;
+  s.ex+=(endTarget.x-s.ex)*speed;s.ey+=(endTarget.y-s.ey)*speed;
+  const dx=s.ex-s.rx,dy=s.ey-s.ry;
+  const hue=i%5===0?secondary:main;
+  const width=i%11===0?1.25:.62;
+  // Each filament is drawn alone with its own soft glass glow.
+  ctx.beginPath();ctx.moveTo(s.rx,s.ry);ctx.lineTo(s.ex,s.ey);
+  ctx.strokeStyle=hue;ctx.globalAlpha=.22+(i%7)*.035;ctx.lineWidth=width+1.3;
+  ctx.shadowColor=hue;ctx.shadowBlur=7;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(s.rx,s.ry);ctx.lineTo(s.ex,s.ey);
+  ctx.strokeStyle='#eafcff';ctx.globalAlpha=.16+(i%5)*.025;ctx.lineWidth=.32+width*.22;
+  ctx.shadowColor='#b9f5ff';ctx.shadowBlur=4;ctx.stroke();
+ }
+ ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.restore();
 }
 function draw(now){if(paused){requestAnimationFrame(draw);return}if(now-lastFrame<33){requestAnimationFrame(draw);return}frame++;const dt=now-lastFrame;lastFrame=now;fpsSmooth=lerp(fpsSmooth,1000/Math.max(1,dt),.08);if(frame%12===0)$('fps').textContent=Math.round(fpsSmooth);
 ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
@@ -117,8 +132,9 @@ requestAnimationFrame(draw)}
 
 const mouseStrands=Array.from({length:30},(_,i)=>({
  x:innerWidth/2,y:innerHeight/2,
- speed:.012+(i%10)*.0038+Math.floor(i/10)*.0045,
- length:205+(i%6)*24,phase:i*2.399,side:(i-14.5)*6.4
+ speed:.008+((i*29)%101)*.00042,
+ length:190+((i*43)%9)*29,phase:i*2.399,
+ side:(i-14.5)*6.4,driftPhase:i*1.731
 }));
 function drawMouseEnergy(now){
  // 30 distinct, straight, thick glass filaments in separate lanes.
@@ -128,10 +144,11 @@ function drawMouseEnergy(now){
  ctx.save();ctx.globalCompositeOperation='lighter';
  for(let i=0;i<30;i++){
   const s=mouseStrands[i],lane=s.side;
-  const targetX=mouseX+px*lane,targetY=mouseY+py*lane;
+  // Independent target offset and catch-up speed for every strand.
+  const personalOffset=lane+Math.sin(now*.00055+s.driftPhase)*5.5;
+  const targetX=mouseX+px*personalOffset,targetY=mouseY+py*personalOffset;
   s.x+=(targetX-s.x)*s.speed;s.y+=(targetY-s.y)*s.speed;
-  const drift=Math.sin(now*.0008+s.phase)*1.8;
-  const sx=s.x+px*(lane+drift),sy=s.y+py*(lane+drift);
+  const sx=s.x,sy=s.y;
   const ex=sx-dx*s.length,ey=sy-dy*s.length;
   const color=i%3===0?'#64efff':i%3===1?'#b68aff':'#e1caff';
   ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(ex,ey);
