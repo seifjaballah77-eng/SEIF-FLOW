@@ -1,0 +1,19 @@
+{
+  "name": "SEIF FLOW",
+  "short_name": "SEIF FLOW",
+  "description": "تحكم بالطاقة والحركة عبر يديك",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#03030a",
+  "theme_color": "#03030a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
