@@ -23,7 +23,7 @@ header,.bottom{display:flex;align-items:center;justify-content:space-between;gap
 .brand{display:flex;align-items:center;gap:12px}.mark{width:38px;height:38px;border:1px solid #8c5cff;border-radius:12px;display:grid;place-items:center;box-shadow:0 0 22px #7d42ff55;color:var(--cyan);font-size:20px}.brand strong{font-size:16px;letter-spacing:3px;display:block}.brand small{font-size:9px;color:#9a8abf;letter-spacing:1.5px}
 .pill{border:1px solid var(--line);background:rgba(8,8,20,.65);backdrop-filter:blur(12px);border-radius:30px;padding:9px 13px;font-size:11px;color:#b8b2d0;display:flex;align-items:center;gap:8px}
 .dot{width:7px;height:7px;border-radius:50%;background:#777;box-shadow:0 0 10px currentColor}.dot.live{background:#5affc1;color:#5affc1}
-.controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.btn{pointer-events:auto;border:1px solid #7350b9;background:rgba(25,15,48,.82);color:#eee8ff;border-radius:12px;padding:11px 16px;font-size:12px;cursor:pointer;transition:.2s;backdrop-filter:blur(12px)}.btn:hover{border-color:var(--cyan);box-shadow:0 0 18px #7c4cff55;transform:translateY(-1px)}.btn.primary{background:linear-gradient(110deg,#6d35c9,#245b88);border-color:#a77aff}body.active.mouse-mode{cursor:none}#mouseCursor{position:fixed;z-index:10;pointer-events:none;width:22px;height:22px;border:1px solid #d9d9e2;border-radius:50%;transform:translate(-50%,-50%);box-shadow:none;background:transparent;display:none}body.active.mouse-mode #mouseCursor{display:block}.btn:disabled{opacity:.5;cursor:wait}
+.controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.shortcut-hint{pointer-events:auto;align-self:center;color:#c7b7e9;background:#090713cc;border:1px solid #7654ad66;border-radius:10px;padding:7px 12px;font-size:11px;text-align:center;max-width:900px}.btn.active-mode{border-color:#65f4ff;background:#201747;box-shadow:0 0 16px #65eaff44;color:#fff}.btn{pointer-events:auto;border:1px solid #7350b9;background:rgba(25,15,48,.82);color:#eee8ff;border-radius:12px;padding:11px 16px;font-size:12px;cursor:pointer;transition:.2s;backdrop-filter:blur(12px)}.btn:hover{border-color:var(--cyan);box-shadow:0 0 18px #7c4cff55;transform:translateY(-1px)}.btn.primary{background:linear-gradient(110deg,#6d35c9,#245b88);border-color:#a77aff}body.active.mouse-mode{cursor:none}#mouseCursor{position:fixed;z-index:10;pointer-events:none;width:22px;height:22px;border:1px solid #d9d9e2;border-radius:50%;transform:translate(-50%,-50%);box-shadow:none;background:transparent;display:none}body.active.mouse-mode #mouseCursor{display:block}.btn:disabled{opacity:.5;cursor:wait}
 .bottom{align-items:flex-end}.hint{max-width:290px;color:#aaa4c2;font-size:11px;line-height:1.8;background:rgba(8,8,20,.55);border:1px solid var(--line);padding:10px 14px;border-radius:13px;backdrop-filter:blur(10px)}
 .stats{display:flex;gap:8px;flex-wrap:wrap}.stat{min-width:84px;text-align:center;padding:9px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(8,8,20,.6);backdrop-filter:blur(10px)}.stat b{display:block;font-size:15px;color:var(--cyan);font-weight:600}.stat span{font-size:9px;color:var(--muted)}
 #video{position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-10px;top:-10px}
@@ -45,7 +45,7 @@ body.active #message{display:none!important}
 <canvas id="stage"></canvas><video id="video" playsinline muted></video><video id="camPreview" playsinline muted></video>
 <div class="hud">
 <header><div class="brand"><div class="mark">✧</div><div><strong>SEIF FLOW</strong><small>CONTROL THE ENERGY · SHAPE THE MOTION</small></div></div><div class="pill"><i id="statusDot" class="dot"></i><span id="status">النظام جاهز</span></div></header>
-<div class="controls"><button class="btn primary" id="mouseStart" onclick="document.body.classList.add('active','mouse-mode');document.getElementById('message').classList.add('hidden')">ابدأ بالفأرة</button><button class="btn" id="attractMode" type="button">وضع الانجذاب</button><button class="btn" id="repelMode" type="button">وضع الانتثار</button><button class="btn" id="start">تشغيل الكاميرا</button><button class="btn" id="pause">إيقاف التأثير</button><button class="btn" id="reset">إعادة ضبط</button><button class="btn" id="mirror">عكس العرض: تشغيل</button><button class="btn" id="dual">نقطة ثانية: إيقاف</button><button class="btn" id="motion">تفعيل مستشعر الهاتف</button></div>
+<div class="controls"><button class="btn primary" id="mouseStart" onclick="document.body.classList.add('active','mouse-mode');document.getElementById('message').classList.add('hidden')">ابدأ بالفأرة</button><button class="btn" id="attractMode" type="button">وضع الانجذاب</button><button class="btn" id="repelMode" type="button">وضع الانتثار</button><button class="btn" id="start">تشغيل الكاميرا</button><button class="btn" id="pause">إيقاف التأثير</button><button class="btn" id="reset">إعادة ضبط</button><button class="btn" id="mirror">عكس العرض: تشغيل</button><button class="btn" id="dual">نقطة ثانية: إيقاف</button><button class="btn" id="motion">تفعيل مستشعر الهاتف</button></div><div class="shortcut-hint" id="shortcutHint">اختصارات: M الفأرة · C الكاميرا · A انجذاب · R انتثار · Space إيقاف/متابعة · +/− المجال · 1–6 الأشكال · Esc إغلاق</div>
 <div class="bottom"><div class="hint" id="hint">ارفع يديك أمام الكاميرا لتبدأ التجربة.<br>افتح كفيك لنشر الطاقة، واقبضهما لجذب الخطوط إلى المركز.</div><div class="stats"><div class="stat"><b id="hands">0</b><span>الأيدي المكتشفة</span></div><div class="stat"><b id="gesture">—</b><span>الحركة</span></div><div class="stat"><b id="fps">60</b><span>إطار / ثانية</span></div></div></div>
 </div>
 <button id="panelToggle" type="button" aria-label="فتح لوحة التحكم">‹</button><div id="mouseCursor"></div>
@@ -81,8 +81,7 @@ addEventListener('pointerdown',e=>{if(e.target.closest('button')||e.button!==0)r
 addEventListener('pointerup',e=>{if(e.button!==0)return;if(mouseDown){mouseDown=false;const releasedAt=performance.now();burstUntil=releasedAt+420;burstPower=1;if(mouseMode){if(mouseForceMode==='repel'){mouseRepelUntil=releasedAt+850;mouseRepelPower=1;mouseShapeStage=0;}else{mouseShapeStage=mouseShapeStage>=6?0:mouseShapeStage+1;}mouseShapeStarted=releasedAt;const labels=['خيوط حرة','كرة الطاقة','دوامة','حلقة طاقة','زهرة طاقة','نجمة طاقة','مجرة'];$('gesture').textContent=labels[mouseShapeStage];$('hint').textContent=mouseShapeStage===0?'عادت الخيوط إلى وضعها الحر.':'الشكل '+mouseShapeStage+'/6: '+labels[mouseShapeStage]+' — انقر مجدداً للشكل التالي.';updateMouseHand()}}});
 addEventListener('contextmenu',e=>{if(mouseMode){e.preventDefault();mousePalette=(mousePalette+1)%palettes.length}});
 addEventListener('wheel',e=>{if(!mouseMode)return;e.preventDefault();mouseRadius=clamp(mouseRadius*(e.deltaY<0?1.12:1/1.12),.35,3.2);$('status').textContent='مجال التأثير: '+Math.round(228*mouseRadius)+'px'},{passive:false});
-addEventListener('dblclick',()=>{if(mouseMode){mousePinchUntil=performance.now()+650;mouseShapeStage=0;updateMouseHand()}});addEventListener('contextmenu',e=>{if(mouseMode){e.preventDefault();mousePalette=(mousePalette+1)%palettes.length}});addEventListener('wheel',e=>{if(!mouseMode)return;e.preventDefault();mouseRadius=clamp(mouseRadius+(e.deltaY<0?.08:-.08),.45,2.1)},{passive:false});
-addEventListener('dblclick',()=>{if(mouseMode){mousePinchUntil=performance.now()+650;updateMouseHand()}});
+addEventListener('dblclick',()=>{if(mouseMode){mousePinchUntil=performance.now()+650;mouseShapeStage=0;updateMouseHand()}});
 function updateMouseHand(){const now=performance.now(),palm=72,base={x:mouseX,y:mouseY};const closed=mouseDown;const pinch=now<mousePinchUntil;const spread=closed?.32:.95;const p=Array.from({length:21},()=>({x:base.x,y:base.y}));
 const wrist={x:base.x,y:base.y+48};p[0]=wrist;
 const fingersDef=[{ids:[1,2,3,4],x:-1.0,len:42},{ids:[5,6,7,8],x:-.48,len:66},{ids:[9,10,11,12],x:0,len:75},{ids:[13,14,15,16],x:.48,len:66},{ids:[17,18,19,20],x:.9,len:54}];
@@ -97,7 +96,13 @@ $('start').addEventListener('click',()=>startCamera());
 $('status').textContent='اختر طريقة التحكم';
 $('panelToggle').addEventListener('click',()=>{const open=document.body.classList.toggle('drawer-open');$('panelToggle').textContent=open?'›':'‹';$('panelToggle').setAttribute('aria-label',open?'إغلاق لوحة التحكم':'فتح لوحة التحكم')});$('mouseStart').addEventListener('click',()=>enableMouseMode('وضع الفأرة'));
 $('attractMode').addEventListener('click',()=>{mouseForceMode='attract';mouseRepelUntil=0;$('attractMode').classList.add('primary');$('repelMode').classList.remove('primary');$('status').textContent='وضع الانجذاب: الخيوط تتجه نحو المؤشر'});
-$('repelMode').addEventListener('click',()=>{mouseForceMode='repel';$('repelMode').classList.add('primary');$('attractMode').classList.remove('primary');$('status').textContent='وضع الانتثار: اضغط مطولاً للجذب واترك الفأرة للانتثار'});$('dual').addEventListener('click',()=>{dualMouse=!dualMouse;$('dual').textContent='نقطة ثانية: '+(dualMouse?'تشغيل':'إيقاف')});
+$('repelMode').addEventListener('click',()=>{mouseForceMode='repel';$('repelMode').classList.add('primary');$('attractMode').classList.remove('primary');$('status').textContent='وضع الانتثار: اضغط مطولاً للجذب واترك الفأرة للانتثار'});
+function selectForceMode(mode){mouseForceMode=mode;mouseRepelUntil=0;$('attractMode').classList.toggle('active-mode',mode==='attract');$('repelMode').classList.toggle('active-mode',mode==='repel');$('attractMode').classList.toggle('primary',mode==='attract');$('repelMode').classList.toggle('primary',mode==='repel');$('status').textContent=mode==='attract'?'وضع الانجذاب':'وضع الانتثار: اضغط مطولاً للجذب ثم اترك للانتثار';}
+$('attractMode').onclick=()=>selectForceMode('attract');
+$('repelMode').onclick=()=>selectForceMode('repel');
+selectForceMode('attract');
+function setMouseShape(n){enableMouseMode('وضع الفأرة');mouseShapeStage=n;mouseShapeStarted=performance.now();$('gesture').textContent=['خيوط حرة','كرة الطاقة','دوامة','حلقة طاقة','زهرة طاقة','نجمة طاقة','مجرة'][n];}
+$('dual').addEventListener('click',()=>{dualMouse=!dualMouse;$('dual').textContent='نقطة ثانية: '+(dualMouse?'تشغيل':'إيقاف')});
 $('motion').addEventListener('click',enableDeviceMotion);
 
 $('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'متابعة التأثير':'إيقاف التأثير'});
@@ -224,7 +229,22 @@ function drawMouseEnergy(now){
 }
 
 requestAnimationFrame(draw);
-addEventListener('keydown',e=>{if(e.key==='Escape'&&stageActive){leaveStage();$('message').classList.remove('hidden')}});
+addEventListener('keydown',e=>{
+ const tag=(e.target&&e.target.tagName||'').toLowerCase();
+ if(['input','textarea','select'].includes(tag)||e.ctrlKey||e.altKey||e.metaKey)return;
+ const k=e.key.toLowerCase();
+ if(e.key==='Escape'){if(document.body.classList.contains('drawer-open')){$('panelToggle').click();}else if(stageActive){leaveStage();$('message').classList.remove('hidden')}return;}
+ if(e.code==='Space'){e.preventDefault();$('pause').click();return;}
+ if(k==='m'){enableMouseMode('وضع الفأرة');return;}
+ if(k==='c'){startCamera();return;}
+ if(k==='a'){selectForceMode('attract');return;}
+ if(k==='r'){selectForceMode('repel');return;}
+ if(k==='+'||k==='='){mouseRadius=clamp(mouseRadius*1.12,.35,3.2);$('status').textContent='مجال التأثير: '+Math.round(228*mouseRadius)+'px';return;}
+ if(k==='-'||k==='_'){mouseRadius=clamp(mouseRadius/1.12,.35,3.2);$('status').textContent='مجال التأثير: '+Math.round(228*mouseRadius)+'px';return;}
+ if(/^[1-6]$/.test(k)){setMouseShape(Number(k));return;}
+ if(k==='0'){setMouseShape(0);return;}
+ if(k==='p'){$('panelToggle').click();return;}
+});
 if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Offline shell unavailable',err)));}
 addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());if(handTask)handTask.close()});
 </script>
