@@ -77,7 +77,6 @@ document.body.classList.remove('drawer-open')
 function enableMouseMode(reason='وضع الفأرة'){mouseMode=true;running=true;hands=[];document.body.classList.add('mouse-mode');enterStage();$('statusDot').classList.add('live');$('status').textContent=reason;$('start').textContent='تفعيل الكاميرا';$('start').disabled=false;$('hands').textContent='1';$('gesture').textContent='فأرة';$('hint').textContent='حرّك الفأرة لتوجيه 100 خيط نيون. اضغط باستمرار للجذب، واتركه لدفعة؛ السكرول لتغيير المجال، والزر الأيمن لتغيير اللون.'}
 addEventListener('pointermove',e=>{const now=performance.now();const dx=e.clientX-mouseX,dy=e.clientY-mouseY;mouseSpeed=lerp(mouseSpeed,Math.hypot(dx,dy),.35);if(Math.hypot(dx,dy)>1){mouseVX=lerp(mouseVX,dx/Math.hypot(dx,dy),.35);mouseVY=lerp(mouseVY,dy/Math.hypot(dx,dy),.35)}mouseX=e.clientX;mouseY=e.clientY;lastMouseMove=now;const cursor=$('mouseCursor');cursor.style.left=mouseX+'px';cursor.style.top=mouseY+'px';if(mouseMode)updateMouseHand()});
 addEventListener('pointerdown',e=>{if(e.target.closest('button')||e.button!==0)return;mouseDown=true;if(mouseMode)updateMouseHand()});
-addEventListener('pointerdown',e=>{if(e.target.closest('button')||e.button!==0)return;mouseDown=true;if(mouseMode)updateMouseHand()});
 addEventListener('pointerup',e=>{if(e.button!==0)return;if(mouseDown){mouseDown=false;const releasedAt=performance.now();burstUntil=releasedAt+420;burstPower=1;if(mouseMode){if(mouseForceMode==='repel'){mouseRepelUntil=releasedAt+850;mouseRepelPower=1;mouseShapeStage=0;}else{mouseShapeStage=mouseShapeStage>=6?0:mouseShapeStage+1;}mouseShapeStarted=releasedAt;const labels=['خيوط حرة','كرة الطاقة','دوامة','حلقة طاقة','زهرة طاقة','نجمة طاقة','مجرة'];$('gesture').textContent=labels[mouseShapeStage];$('hint').textContent=mouseShapeStage===0?'عادت الخيوط إلى وضعها الحر.':'الشكل '+mouseShapeStage+'/6: '+labels[mouseShapeStage]+' — انقر مجدداً للشكل التالي.';updateMouseHand()}}});
 addEventListener('contextmenu',e=>{if(mouseMode){e.preventDefault();mousePalette=(mousePalette+1)%palettes.length}});
 addEventListener('wheel',e=>{if(!mouseMode)return;e.preventDefault();mouseRadius=clamp(mouseRadius*(e.deltaY<0?1.12:1/1.12),.35,3.2);$('status').textContent='مجال التأثير: '+Math.round(228*mouseRadius)+'px'},{passive:false});
@@ -202,12 +201,12 @@ function drawMouseEnergy(now){
    s.vx+=(tx-s.x)*.035;s.vy+=(ty-s.y)*.035;
   }else{
    const inRange=dist<radius;
-   const shouldAttract=mouseForceMode==='attract'||mouseDown;
-   if(inRange&&shouldAttract){
+   if(inRange&&mouseForceMode==='attract'){
     const force=(1-dist/radius)*.16;
     s.vx+=dx/dist*force;s.vy+=dy/dist*force;
-   }else if(inRange&&repelActive){
-    const force=(1-dist/radius)*.42*mouseRepelPower;
+   }else if(inRange&&mouseForceMode==='repel'){
+    // Continuous outward force: same strength and falloff as attraction, opposite direction.
+    const force=(1-dist/radius)*.16;
     s.vx-=dx/dist*force;s.vy-=dy/dist*force;
    }else{
     s.vx+=(s.homeX-s.x)*.0014;s.vy+=(s.homeY-s.y)*.0014;
