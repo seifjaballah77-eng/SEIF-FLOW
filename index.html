@@ -139,7 +139,7 @@ requestAnimationFrame(draw)}
 
 // One hundred simple, straight neon filaments scattered across the whole screen.
 const mouseStrands=Array.from({length:100},(_,i)=>{
- const length=22+Math.random()*34,angle=(Math.random()-.5)*.16;
+ const length=50+Math.random()*30,angle=(Math.random()-.5)*.16;
  const x=Math.random()*innerWidth,y=Math.random()*innerHeight;
  return {x,y,homeX:x,homeY:y,vx:0,vy:0,length,angle,color:i%3};
 });
@@ -160,8 +160,10 @@ function drawMouseEnergy(now){
   const speed=Math.hypot(s.vx,s.vy),angle=s.angle+clamp(s.vx*.006,-.18,.18);
   const half=s.length*.5,ax=Math.cos(angle)*half,ay=Math.sin(angle)*half;
   const color=colors[s.color],alpha=dist<radius?.62:.42;
-  // Plain, thin, straight coloured lines; no 2D/3D styling or decorative glow.
-  ctx.beginPath();ctx.moveTo(s.x-ax,s.y-ay);ctx.lineTo(s.x+ax,s.y+ay);
+  // A tiny downward bow gives each filament the relaxed shape of a hanging cord.
+  const sag=clamp(s.length*.16,7,14);
+  ctx.beginPath();ctx.moveTo(s.x-ax,s.y-ay);
+  ctx.quadraticCurveTo(s.x,s.y+sag,s.x+ax,s.y+ay);
   ctx.strokeStyle=color;ctx.globalAlpha=alpha;ctx.lineWidth=1.2;
   ctx.shadowBlur=0;ctx.stroke();
  }
