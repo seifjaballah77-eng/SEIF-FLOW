@@ -102,42 +102,48 @@ if(!mouseMode){for(let i=0;i<hands.length;i++)drawHand(hands[i],i)}
 requestAnimationFrame(draw)}
 
 function drawMouseEnergy(now){
- // Scattered individual long neon filaments: deliberately varied positions,
- // angles, lengths and curvature so they never form a parallel ribbon or orb.
- const speed=clamp(mouseSpeed/22,0,1);
+ // 100 separate, translucent glass-like light trails. They stay in a compact
+ // flowing cloud around the cursor, with individual speeds and soft blur.
+ const speed=clamp(mouseSpeed/20,0,1);
+ const dir=Math.atan2(-mouseVY,-mouseVX);
  ctx.save();ctx.globalCompositeOperation='lighter';
- for(let i=0;i<250;i++){
-  const seed=i*12.9898;
-  const a=Math.sin(seed)*.5+.5;
-  const b=Math.sin(seed*2.17+7.3)*.5+.5;
-  const c=Math.sin(seed*.73+19.1)*.5+.5;
-  const angle=Math.atan2(-mouseVY,-mouseVX)+(a-.5)*1.55;
-  const dirX=Math.cos(angle),dirY=Math.sin(angle);
-  const sideX=-dirY,sideY=dirX;
-  const spread=(b-.5)*(75+speed*65);
-  const behind=(c*230)+35+speed*120;
-  const sx=mouseX-dirX*behind+sideX*spread;
-  const sy=mouseY-dirY*behind+sideY*spread;
-  const length=85+(a*230)+speed*100;
-  const drift=Math.sin(now*.0012+i*1.71)*(8+20*b);
-  const ex=sx+dirX*length+sideX*(drift+(a-.5)*38);
-  const ey=sy+dirY*length+sideY*(drift+(a-.5)*38);
-  const bend1=(Math.sin(i*4.1+now*.0007))*((b-.5)*55);
-  const bend2=(Math.cos(i*2.3+now*.0009))*((c-.5)*65);
-  const c1x=sx+dirX*length*.32+sideX*bend1;
-  const c1y=sy+dirY*length*.32+sideY*bend1;
-  const c2x=sx+dirX*length*.72+sideX*bend2;
-  const c2y=sy+dirY*length*.72+sideY*bend2;
-  const colors=['#55eaff','#9b5cff','#d4b5ff','#6f42d8','#a7f7ff'];
+ for(let i=0;i<100;i++){
+  const seed=i*78.233;
+  const r1=Math.sin(seed)*.5+.5;
+  const r2=Math.sin(seed*1.37+4.2)*.5+.5;
+  const r3=Math.sin(seed*.61+11.8)*.5+.5;
+  const r4=Math.sin(seed*2.11+2.7)*.5+.5;
+  // A compact, irregular distribution: distinct strands, but never a solid ball.
+  const angle=dir+(r1-.5)*1.35;
+  const sideX=-Math.sin(angle),sideY=Math.cos(angle);
+  const backX=Math.cos(angle),backY=Math.sin(angle);
+  const lateral=(r2-.5)*(24+speed*22);
+  const lag=18+r3*(65+speed*115);
+  const sx=mouseX-backX*lag+sideX*lateral;
+  const sy=mouseY-backY*lag+sideY*lateral;
+  const strandSpeed=.35+r4*2.4;
+  const length=(45+r1*125)*strandSpeed+speed*45;
+  const phase=now*(.0007+strandSpeed*.00065)+i*1.91;
+  const wave=Math.sin(phase)* (3+r2*8);
+  const endSide=(r3-.5)*18+wave;
+  const ex=sx+backX*length+sideX*endSide;
+  const ey=sy+backY*length+sideY*endSide;
+  const bendA=Math.sin(phase*.83+i)* (5+r1*15);
+  const bendB=Math.cos(phase*.67+i*.7)*(5+r2*17);
+  const c1x=sx+backX*length*.32+sideX*(bendA+lateral*.12);
+  const c1y=sy+backY*length*.32+sideY*(bendA+lateral*.12);
+  const c2x=sx+backX*length*.72+sideX*(bendB+endSide*.35);
+  const c2y=sy+backY*length*.72+sideY*(bendB+endSide*.35);
+  const color=i%4===0?'#65efff':i%4===1?'#b58aff':i%4===2?'#e1caff':'#8d6cff';
+  // Soft outer glow, then a very fine translucent glass core.
   ctx.beginPath();ctx.moveTo(sx,sy);ctx.bezierCurveTo(c1x,c1y,c2x,c2y,ex,ey);
-  ctx.strokeStyle=colors[i%colors.length];ctx.globalAlpha=.18+(c*.34);
-  ctx.lineWidth=i%19===0?1.8:.65;ctx.shadowBlur=0;ctx.stroke();
-  if(i%4===0){
-   ctx.beginPath();ctx.moveTo(sx,sy);ctx.bezierCurveTo(c1x,c1y,c2x,c2y,ex,ey);
-   ctx.strokeStyle='#e8fbff';ctx.globalAlpha=.12+(a*.1);ctx.lineWidth=.28;ctx.stroke();
-  }
+  ctx.strokeStyle=color;ctx.globalAlpha=.10+r4*.12;ctx.lineWidth=1.15+r2*.9;
+  ctx.shadowColor=color;ctx.shadowBlur=9+r1*9;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(sx,sy);ctx.bezierCurveTo(c1x,c1y,c2x,c2y,ex,ey);
+  ctx.strokeStyle='#eafcff';ctx.globalAlpha=.10+r3*.13;ctx.lineWidth=.28+r1*.22;
+  ctx.shadowColor='#a9efff';ctx.shadowBlur=4;ctx.stroke();
  }
- ctx.restore();
+ ctx.restore();ctx.globalAlpha=1;ctx.shadowBlur=0;
 }
 
 requestAnimationFrame(draw);
