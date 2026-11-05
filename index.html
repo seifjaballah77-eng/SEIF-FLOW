@@ -47,11 +47,11 @@ const fingers=[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,1
 const smoothHands=[];
 function point(lm){let x=mirrored?1-lm.x:lm.x;return {x:x*W,y:lm.y*H,z:lm.z||0}}
 function analyze(lm){const p=lm.map(point),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);const palm=Math.max(1,dist(p[0],p[9]));let extended=0;for(const tip of [8,12,16,20])if(dist(p[tip],p[0])>palm*1.22)extended++;const pinch=dist(p[4],p[8])<palm*.34;const openness=clamp((extended/4)*.78+(dist(p[4],p[0])/palm>.85?.22:0),0,1);return {p,pinch,openness,closed:openness<.28,center:{x:(p[0].x+p[9].x+p[5].x+p[17].x)/4,y:(p[0].y+p[9].y+p[5].y+p[17].y)/4}}}
-let mouseMode=false,stageActive=false,mouseX=W/2,mouseY=H/2,mouseDown=false,lastMouseMove=0,mouseSpeed=0,mousePinchUntil=0;
+let mouseMode=false,stageActive=false,mouseX=W/2,mouseY=H/2,mouseDown=false,lastMouseMove=0,mouseSpeed=0,mouseVX=1,mouseVY=0,mousePinchUntil=0;
 function enterStage(){stageActive=true;document.body.classList.add('active');$('message').classList.add('hidden')}
 function leaveStage(){stageActive=false;document.body.classList.remove('active')}
-function enableMouseMode(reason='وضع الفأرة'){mouseMode=true;running=true;hands=[];enterStage();$('statusDot').classList.add('live');$('status').textContent=reason;$('start').textContent='تفعيل الكاميرا';$('start').disabled=false;$('hands').textContent='1';$('gesture').textContent='فأرة';$('hint').textContent='حرّك الفأرة لتحريك اليد الرقمية. اضغط باستمرار لقبضها، وانقر نقرتين لضم الأصابع.'}
-addEventListener('pointermove',e=>{const now=performance.now();const dx=e.clientX-mouseX,dy=e.clientY-mouseY;mouseSpeed=lerp(mouseSpeed,Math.hypot(dx,dy),.35);mouseX=e.clientX;mouseY=e.clientY;lastMouseMove=now;if(mouseMode)updateMouseHand()});
+function enableMouseMode(reason='وضع الفأرة'){mouseMode=true;running=true;hands=[];mouseTrail=[];enterStage();$('statusDot').classList.add('live');$('status').textContent=reason;$('start').textContent='تفعيل الكاميرا';$('start').disabled=false;$('hands').textContent='1';$('gesture').textContent='فأرة';$('hint').textContent='حرّك الفأرة لتحريك اليد الرقمية. اضغط باستمرار لقبضها، وانقر نقرتين لضم الأصابع.'}
+addEventListener('pointermove',e=>{const now=performance.now();const dx=e.clientX-mouseX,dy=e.clientY-mouseY;mouseSpeed=lerp(mouseSpeed,Math.hypot(dx,dy),.35);if(Math.hypot(dx,dy)>1){mouseVX=lerp(mouseVX,dx/Math.hypot(dx,dy),.35);mouseVY=lerp(mouseVY,dy/Math.hypot(dx,dy),.35)}mouseX=e.clientX;mouseY=e.clientY;lastMouseMove=now;if(mouseMode)updateMouseHand()});
 addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;mouseDown=true;if(mouseMode)updateMouseHand()});
 addEventListener('pointerup',()=>{mouseDown=false;if(mouseMode)updateMouseHand()});
 addEventListener('dblclick',()=>{if(mouseMode){mousePinchUntil=performance.now()+650;updateMouseHand()}});
@@ -59,7 +59,7 @@ function updateMouseHand(){const now=performance.now(),palm=72,base={x:mouseX,y:
 const wrist={x:base.x,y:base.y+48};p[0]=wrist;
 const fingersDef=[{ids:[1,2,3,4],x:-1.0,len:42},{ids:[5,6,7,8],x:-.48,len:66},{ids:[9,10,11,12],x:0,len:75},{ids:[13,14,15,16],x:.48,len:66},{ids:[17,18,19,20],x:.9,len:54}];
 for(let f=0;f<fingersDef.length;f++){const d=fingersDef[f],curl=closed?1.05:0;let prev=wrist;for(let j=0;j<4;j++){const t=(j+1)/4,angle=(-Math.PI/2)+(d.x*.65)+curl*t;let x=base.x+d.x*palm*(f===0?1.0:0.72)*spread*(1-t*.28)+Math.cos(angle)*d.len*t*(closed?.42:1);let y=base.y+48-d.len*t*(closed?.25:1)+Math.sin(curl*t)*17;if(f===0){x=base.x-40*t;y=base.y+28-22*t}if(pinch&&f===0){x=base.x-12*t;y=base.y-6*t}if(pinch&&f===1){x=base.x+9*t;y=base.y-7*t}const idx=d.ids[j];p[idx]={x,y};prev=p[idx]}}
-hands=[{p,pinch,openness:closed?.12:.88,closed,center:{x:base.x,y:base.y+8}}];$('gesture').textContent=pinch?'ضمّ الأصابع':closed?'قبضة':'فأرة';$('hands').textContent='1';}
+hands=[];$('gesture').textContent='خيوط حرة';$('hands').textContent='—';}
 async function startCamera(){if(running&&!mouseMode)return;mouseMode=false;$('start').disabled=true;$('status').textContent='جارٍ تحميل التعرف على اليد';try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:960},height:{ideal:720},frameRate:{ideal:30,max:30}}});video.srcObject=stream;preview.srcObject=stream;await video.play();await preview.play().catch(()=>{});preview.classList.add('show');
 const vision=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
 try{handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.5,minTrackingConfidence:.5})}catch(e){handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'CPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.5,minTrackingConfidence:.5})}
@@ -96,42 +96,35 @@ ctx.globalAlpha=1;ctx.shadowBlur=0;
 for(let i=0;i<p.length;i++){ctx.beginPath();ctx.arc(p[i].x,p[i].y,[4,8,12,16,20].includes(i)?1.8:1.1,0,TAU);ctx.fillStyle=secondary;ctx.globalAlpha=.72;ctx.shadowColor=main;ctx.shadowBlur=0;ctx.fill();}
 ctx.restore();
 }
-// Flowing filaments: a compact set of smooth, animated curves instead of thousands of particles.
-function drawEnergy(now){const count=Math.round(Math.min(30,Math.max(16,W/42))*quality);const cx=W/2,cy=H/2;let spread=energy;let targets=hands;
-if(targets.length){if(targets.length===2){const d=Math.hypot(targets[0].center.x-targets[1].center.x,targets[0].center.y-targets[1].center.y)/Math.max(W,H);spread=clamp(.22+d*1.25,.18,1.35)}else spread=.4+targets[0].openness*.9}
-energy=lerp(energy,spread,.045);spin+=.0035;
-ctx.save();ctx.globalCompositeOperation='lighter';
-for(let i=0;i<count;i++){const t=i/count,angle=t*TAU*3+spin*(i%2?1:-1),rad=(Math.min(W,H)*(.08+energy*.42))*(.55+.45*Math.sin(t*TAU*5+spin*2));let sx=cx+Math.cos(angle)*rad,sy=cy+Math.sin(angle)*rad*.62;let pull=0;
-if(targets.length){for(const h of targets){const dx=h.center.x-sx,dy=h.center.y-sy;const d=Math.hypot(dx,dy)+30;pull+=clamp(1-d/Math.max(W,H),0,.8)*(h.closed?-.5:.35);}}
-const wave=Math.sin(now*.0007+i*.28)*18;const ex=sx+Math.cos(angle+1.4)*(45+energy*95)+wave+pull*70,ey=sy+Math.sin(angle+1.4)*(38+energy*85)-wave*.7;
-const c=i%3===0?'#58eaff':i%3===1?'#a66bff':'#7548d7';ctx.beginPath();ctx.moveTo(sx,sy);ctx.bezierCurveTo(sx+Math.cos(angle+1)*75,sy+Math.sin(angle+1)*55,ex-Math.cos(angle)*65,ey-Math.sin(angle)*50,ex,ey);ctx.strokeStyle=c;ctx.globalAlpha=.25+.36*(.5+.5*Math.sin(now*.001+i));ctx.lineWidth=i%7===0?1.45:.65;ctx.shadowColor=c;ctx.shadowBlur=0;ctx.stroke();}
-ctx.restore();ctx.globalAlpha=1;
-}
 function draw(now){if(paused){requestAnimationFrame(draw);return}if(now-lastFrame<33){requestAnimationFrame(draw);return}frame++;const dt=now-lastFrame;lastFrame=now;fpsSmooth=lerp(fpsSmooth,1000/Math.max(1,dt),.08);if(frame%12===0)$('fps').textContent=Math.round(fpsSmooth);
 ctx.fillStyle='rgba(2,2,9,.22)';ctx.fillRect(0,0,W,H);
 const g=ctx.createRadialGradient(W/2,H/2,10,W/2,H/2,Math.max(W,H)*.65);g.addColorStop(0,'rgba(22,11,52,.13)');g.addColorStop(1,'rgba(0,0,0,.08)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
 drawEnergy(now);
 if(running&&handTask&&video.readyState>=2&&now-lastDetect>30&&video.currentTime!==lastVideoTime){lastDetect=now;lastVideoTime=video.currentTime;try{const res=handTask.detectForVideo(video,now);hands=(res.landmarks||[]).map(analyze);$('hands').textContent=hands.length;let label='—',hint='حرّك يديك لترى خطوط الطاقة تتبعك.';if(hands.some(h=>h.pinch)){label='ضمّ الأصابع';hint='ضم الإبهام والسبابة: تتجمع الخطوط وتلتف حول نقطة اللمس.'}else if(hands.length&&hands.every(h=>h.closed)){label='قبضة';hint='أغلقت يديك: تنهار مسارات الطاقة وتتجمع في المركز.'}else if(hands.length&&hands.some(h=>h.openness>.65)){label='كف مفتوح';hint='افتح كفك: تنتشر المسارات وتتوسع كموجة طاقة.'}else if(hands.length===2){label='يدان';hint='قرّب يديك أو أبعدهما لتغيير تمدد الشبكة بينهما.'}$('gesture').textContent=label;$('hint').textContent=hint;}catch(e){console.warn('hand tracking frame',e)}}
-if(mouseMode){const idle=performance.now()-lastMouseMove;if(idle>1400){mouseSpeed=lerp(mouseSpeed,0,.035)}drawMouseTrails(now);if(!hands.length)updateMouseHand()}
-if(!mouseMode){for(let i=0;i<hands.length;i++)drawHand(hands[i],i)}else{drawMouseEnergy(now)}
+if(mouseMode){const idle=performance.now()-lastMouseMove;if(idle>1400){mouseSpeed=lerp(mouseSpeed,0,.035)}drawMouseEnergy(now)}
+if(!mouseMode){for(let i=0;i<hands.length;i++)drawHand(hands[i],i)}
 requestAnimationFrame(draw)}
 
 function drawMouseEnergy(now){
- const cx=mouseX,cy=mouseY;ctx.save();ctx.globalCompositeOperation='lighter';
+ const speed=clamp(mouseSpeed/18,0,1),backX=-mouseVX,backY=-mouseVY;
+ ctx.save();ctx.globalCompositeOperation='lighter';
  for(let i=0;i<250;i++){
-  const a=i*2.399963+now*.00012, r=18+(i%50)*1.25;
-  const wobble=Math.sin(now*.001+i*.17)*5;
-  const x1=cx+Math.cos(a)*r,y1=cy+Math.sin(a)*r*.62;
-  const x2=cx+Math.cos(a+.48)*(r+28+wobble),y2=cy+Math.sin(a+.48)*(r+18+wobble)*.62;
-  ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(cx+Math.cos(a+.2)*(r+24),cy+Math.sin(a+.2)*(r+18),x2,y2);
-  ctx.strokeStyle=i%3===0?'#58eaff':i%3===1?'#a66bff':'#d6b8ff';
-  ctx.globalAlpha=.13+(i%7)*.025;ctx.lineWidth=i%12===0?1:.48;ctx.shadowBlur=0;ctx.stroke();
+  const lane=i/250,side=((i%25)-12)/12;
+  const length=34+(i%17)*5+speed*65;
+  const spread=side*(8+lane*46);
+  const sx=mouseX+backX*(lane*length)+(-backY)*spread;
+  const sy=mouseY+backY*(lane*length)+(backX)*spread;
+  const wave=Math.sin(now*.0018+i*.37)* (2+lane*7);
+  const ex=sx+backX*(16+speed*22)+(-backY)*(wave+side*4);
+  const ey=sy+backY*(16+speed*22)+(backX)*(wave+side*4);
+  const bend=12+lane*25;
+  ctx.beginPath();ctx.moveTo(mouseX+(-backY)*spread*.15,mouseY+(backX)*spread*.15);
+  ctx.bezierCurveTo(sx+backX*bend-backY*wave,sy+backY*bend+backX*wave,ex-backX*bend*.5,ey-backY*bend*.5,ex,ey);
+  ctx.strokeStyle=i%4===0?'#55eaff':i%4===1?'#9b5cff':i%4===2?'#d4b5ff':'#6f42d8';
+  ctx.globalAlpha=.22+(i%11)*.025;ctx.lineWidth=i%16===0?1.05:.45;ctx.shadowBlur=0;ctx.stroke();
  }
  ctx.restore();
 }
-
-let mouseTrail=[];
-function drawMouseTrails(now){mouseTrail.push({x:mouseX,y:mouseY,t:now});mouseTrail=mouseTrail.filter(p=>now-p.t<420);ctx.save();ctx.globalCompositeOperation='lighter';for(let i=1;i<mouseTrail.length;i++){const a=mouseTrail[i-1],b=mouseTrail[i],alpha=i/mouseTrail.length;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.quadraticCurveTo((a.x+b.x)/2,(a.y+b.y)/2-10,b.x,b.y);ctx.strokeStyle='#a66bff';ctx.globalAlpha=alpha*.42;ctx.lineWidth=1+alpha*2;ctx.shadowColor='#a66bff';ctx.shadowBlur=12;ctx.stroke()}ctx.restore()}
 
 requestAnimationFrame(draw);
 addEventListener('keydown',e=>{if(e.key==='Escape'&&stageActive){leaveStage();$('message').classList.remove('hidden')}});
