@@ -109,8 +109,16 @@ function drawHand(hand,index){
   const root0={x:lerp(palmCenter.x,base.x,.22+u*.55),y:lerp(palmCenter.y,base.y,.22+u*.55)};
   const endT=.24+u*.76,seg=endT*3,segI=Math.min(2,Math.floor(seg)),segT=seg-segI;
   const end0={x:lerp(p[path[segI+1]].x,p[path[segI+2]].x,segT),y:lerp(p[path[segI+1]].y,p[path[segI+2]].y,segT)};
-  const rootTarget={x:palmCenter.x+(root0.x-palmCenter.x)*depthScale,y:palmCenter.y+(root0.y-palmCenter.y)*depthScale};
-  const endTarget={x:palmCenter.x+(end0.x-palmCenter.x)*depthScale,y:palmCenter.y+(end0.y-palmCenter.y)*depthScale};
+  const handRoot={x:palmCenter.x+(root0.x-palmCenter.x)*depthScale,y:palmCenter.y+(root0.y-palmCenter.y)*depthScale};
+  const handEnd={x:palmCenter.x+(end0.x-palmCenter.x)*depthScale,y:palmCenter.y+(end0.y-palmCenter.y)*depthScale};
+  // As the hand closes, the filaments fold into a rounded energy orb.
+  const ballMix=clamp((.62-hand.openness)/.62,0,1);
+  const ballAngle=i*2.3999632297;
+  const ballRadius=(hand.palmSize||85)*(.78+((i*17)%23)/100);
+  const ballRoot={x:palmCenter.x+Math.cos(ballAngle)*ballRadius,y:palmCenter.y+Math.sin(ballAngle)*ballRadius};
+  const ballEnd={x:palmCenter.x+Math.cos(ballAngle+Math.PI+.22*Math.sin(i*1.7))*ballRadius,y:palmCenter.y+Math.sin(ballAngle+Math.PI+.22*Math.sin(i*1.7))*ballRadius};
+  const rootTarget={x:lerp(handRoot.x,ballRoot.x,ballMix),y:lerp(handRoot.y,ballRoot.y,ballMix)};
+  const endTarget={x:lerp(handEnd.x,ballEnd.x,ballMix),y:lerp(handEnd.y,ballEnd.y,ballMix)};
   // Unique speed and independent spring state for every single filament.
   const speed=.075+((i*37)%97)/150;
   let s=states[i];
