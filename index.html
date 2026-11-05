@@ -35,6 +35,8 @@ header,.bottom{display:flex;align-items:center;justify-content:space-between;gap
 
 /* Force immersive mode to hide every HUD label/control; drawer is the only exception. */
 body.active:not(.drawer-open) .hud{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+body.active #message{display:none!important;visibility:hidden!important;opacity:0!important}
+body.active:not(.drawer-open) header,body.active:not(.drawer-open) .controls,body.active:not(.drawer-open) .bottom{display:none!important}
 body.active.drawer-open .hud{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
 body.active #message{display:none!important}
 </style>
@@ -43,7 +45,7 @@ body.active #message{display:none!important}
 <canvas id="stage"></canvas><video id="video" playsinline muted></video><video id="camPreview" playsinline muted></video>
 <div class="hud">
 <header><div class="brand"><div class="mark">✧</div><div><strong>SEIF FLOW</strong><small>CONTROL THE ENERGY · SHAPE THE MOTION</small></div></div><div class="pill"><i id="statusDot" class="dot"></i><span id="status">النظام جاهز</span></div></header>
-<div class="controls"><button class="btn primary" id="mouseStart">ابدأ بالفأرة</button><button class="btn" id="start">تشغيل الكاميرا</button><button class="btn" id="pause">إيقاف التأثير</button><button class="btn" id="reset">إعادة ضبط</button><button class="btn" id="mirror">عكس العرض: تشغيل</button><button class="btn" id="dual">نقطة ثانية: إيقاف</button></div>
+<div class="controls"><button class="btn primary" id="mouseStart" onclick="document.body.classList.add('active','mouse-mode');document.getElementById('message').classList.add('hidden')">ابدأ بالفأرة</button><button class="btn" id="start">تشغيل الكاميرا</button><button class="btn" id="pause">إيقاف التأثير</button><button class="btn" id="reset">إعادة ضبط</button><button class="btn" id="mirror">عكس العرض: تشغيل</button><button class="btn" id="dual">نقطة ثانية: إيقاف</button></div>
 <div class="bottom"><div class="hint" id="hint">ارفع يديك أمام الكاميرا لتبدأ التجربة.<br>افتح كفيك لنشر الطاقة، واقبضهما لجذب الخطوط إلى المركز.</div><div class="stats"><div class="stat"><b id="hands">0</b><span>الأيدي المكتشفة</span></div><div class="stat"><b id="gesture">—</b><span>الحركة</span></div><div class="stat"><b id="fps">60</b><span>إطار / ثانية</span></div></div></div>
 </div>
 <button id="panelToggle" type="button" aria-label="فتح لوحة التحكم">‹</button><div id="mouseCursor"></div>
