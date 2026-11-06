@@ -57,9 +57,26 @@ const video=document.querySelector('#video'),preview=document.querySelector('#ca
 const $=id=>document.getElementById(id);
 let W=0,H=0,dpr=1,handTask=null,stream=null,running=false,paused=false,mirrored=true,lastDetect=0,lastVideoTime=-1,lastFrame=performance.now(),fpsSmooth=60;
 let hands=[],energy=0.48,spin=0,frame=0,quality=1;
-let tiltX=0,tiltY=0,targetTiltX=0,targetTiltY=0;
-function onDeviceTilt(e){targetTiltX=clamp((e.gamma||0)/45,-1,1)*85;targetTiltY=clamp((e.beta||0)/45,-1,1)*85;}
-async function enableDeviceMotion(){try{if(typeof DeviceOrientationEvent==='undefined')throw new Error('مستشعر الحركة غير مدعوم');if(typeof DeviceOrientationEvent.requestPermission==='function'){const permission=await DeviceOrientationEvent.requestPermission();if(permission!=='granted')throw new Error('لم يتم منح الإذن');}addEventListener('deviceorientation',onDeviceTilt);$('motion').textContent='مستشعر الهاتف يعمل';$('status').textContent='حرّك الهاتف مع يدك';}catch(err){$('status').textContent=err.message||'تعذر تفعيل مستشعر الهاتف';}}
+let tiltX=0,tiltY=0,targetTiltX=0,targetTiltY=0,tiltEnabled=false,tiltZeroGamma=null,tiltZeroBeta=null,tiltRawGamma=0,tiltRawBeta=0;
+function onDeviceTilt(e){
+ if(e.gamma==null||e.beta==null)return;
+ tiltRawGamma=e.gamma;tiltRawBeta=e.beta;
+ if(tiltZeroGamma===null||tiltZeroBeta===null){tiltZeroGamma=e.gamma;tiltZeroBeta=e.beta;return;}
+ let gx=e.gamma-tiltZeroGamma,by=e.beta-tiltZeroBeta;
+ const angle=((screen.orientation&&screen.orientation.angle)||window.orientation||0);
+ if(angle===90){const t=gx;gx=by;by=-t;}else if(angle===-90||angle===270){const t=gx;gx=-by;by=t;}else if(Math.abs(angle)===180){gx=-gx;by=-by;}
+ const dead=v=>Math.abs(v)<1.8?0:v-Math.sign(v)*1.8;
+ targetTiltX=clamp(dead(gx)*2.1,-85,85);targetTiltY=clamp(dead(by)*2.1,-85,85);
+}
+async function enableDeviceMotion(){
+ try{
+  if(typeof DeviceOrientationEvent==='undefined')throw new Error('مستشعر ميزان الهاتف غير مدعوم');
+  if(tiltEnabled){tiltZeroGamma=tiltRawGamma;tiltZeroBeta=tiltRawBeta;targetTiltX=0;targetTiltY=0;$('motion').textContent='إعادة معايرة الميزان';$('status').textContent='تمت معايرة الوضع الحالي كنقطة توازن';return;}
+  if(typeof DeviceOrientationEvent.requestPermission==='function'){const permission=await DeviceOrientationEvent.requestPermission();if(permission!=='granted')throw new Error('لم يتم منح إذن مستشعر الهاتف');}
+  tiltZeroGamma=null;tiltZeroBeta=null;addEventListener('deviceorientation',onDeviceTilt);tiltEnabled=true;
+  $('motion').textContent='معايرة ميزان الهاتف';$('status').textContent='ثبّت الهاتف لحظة ثم حرّكه؛ اضغط الزر مجدداً لإعادة المعايرة';
+ }catch(err){$('status').textContent=err.message||'تعذر تفعيل مستشعر الهاتف';}
+}
 const TAU=Math.PI*2,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),lerp=(a,b,t)=>a+(b-a)*t;
 function resize(){W=innerWidth;H=innerHeight;dpr=1;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0)}
 addEventListener('resize',resize);resize();
@@ -67,7 +84,19 @@ const bones=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11
 const fingers=[[0,1,2,3,4],[0,5,6,7,8],[0,9,10,11,12],[0,13,14,15,16],[0,17,18,19,20]];
 const smoothHands=[];
 function point(lm){let x=mirrored?1-lm.x:lm.x;return {x:x*W,y:lm.y*H,z:lm.z||0}}
-function analyze(lm){const p=lm.map(point),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);const palm=Math.max(1,dist(p[0],p[9]));let extended=0;for(const tip of [8,12,16,20])if(dist(p[tip],p[0])>palm*1.22)extended++;const pinch=dist(p[4],p[8])<palm*.34;const openness=clamp((extended/4)*.78+(dist(p[4],p[0])/palm>.85?.22:0),0,1);return {p,pinch,openness,closed:openness<.28,palmSize:palm,center:{x:(p[0].x+p[9].x+p[5].x+p[17].x)/4,y:(p[0].y+p[9].y+p[5].y+p[17].y)/4}}}
+function analyze(lm){
+ const p=lm.map(point),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),palm=Math.max(1,dist(p[0],p[9]));
+ const chains=[[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16],[17,18,19,20]];
+ let extended=0;
+ for(let f=0;f<chains.length;f++){
+  const c=chains[f],tip=dist(p[c[3]],p[0]),joint=dist(p[c[2]],p[0]);
+  if(f===0?(dist(p[4],p[5])>palm*.58):(tip>joint*1.12&&tip>palm*1.08))extended++;
+ }
+ const pinch=dist(p[4],p[8])<palm*.38;
+ const spread=dist(p[4],p[20])/palm;
+ const openness=clamp(extended/5*.82+clamp((spread-.7)/1.1,0,1)*.18,0,1);
+ return {p,pinch,openness,closed:openness<.24,palmSize:palm,extended,center:{x:(p[0].x+p[5].x+p[9].x+p[13].x+p[17].x)/5,y:(p[0].y+p[5].y+p[9].y+p[13].y+p[17].y)/5}};
+}
 let mouseShapeStage=0,mouseShapeStarted=0,mouseForceMode='attract',mouseRepelUntil=0,mouseRepelPower=0;
 const mouseShapeNames=['خيوط حرة','كرة الطاقة','دوامة','حلقة طاقة','زهرة طاقة','نجمة طاقة','مجرة','قلب','رمز اللانهاية','فراشة','ندفة ثلج','شمس مشعة','حلقتان متداخلتان'];
 let mouseMode=false,stageActive=false,mouseX=W/2,mouseY=H/2,mouseDown=false,lastMouseMove=0,mouseSpeed=0,mouseVX=1,mouseVY=0,mousePinchUntil=0,mouseRadius=1,mousePalette=0,dualMouse=false,burstUntil=0,burstPower=0;const palettes=[['#64efff','#b68aff','#e1caff'],['#ff72cf','#a66bff','#ffe0fa'],['#7dffbd','#56eaff','#d7fff0'],['#ffd36b','#ff8a72','#fff0c9']];
@@ -89,7 +118,7 @@ for(let f=0;f<fingersDef.length;f++){const d=fingersDef[f],curl=closed?1.05:0;le
 hands=[];$('gesture').textContent='خيوط حرة';$('hands').textContent='—';}
 async function startCamera(){if(running&&!mouseMode)return;mouseMode=false;document.body.classList.remove('mouse-mode');$('start').disabled=true;$('status').textContent='جارٍ تحميل التعرف على اليد';try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:960},height:{ideal:720},frameRate:{ideal:30,max:30}}});video.srcObject=stream;preview.srcObject=stream;await video.play();await preview.play().catch(()=>{});preview.classList.add('show');
 const vision=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
-try{handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.5,minTrackingConfidence:.5})}catch(e){handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'CPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.55,minHandPresenceConfidence:.5,minTrackingConfidence:.5})}
+try{handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.62,minHandPresenceConfidence:.58,minTrackingConfidence:.62})}catch(e){handTask=await HandLandmarker.createFromOptions(vision,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'CPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.62,minHandPresenceConfidence:.58,minTrackingConfidence:.62})}
 running=true;enterStage();$('statusDot').classList.add('live');$('status').textContent='الكاميرا تعمل';$('start').textContent='الكاميرا تعمل';$('start').disabled=false;
 }catch(err){console.error(err);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}enableMouseMode(err.name==='NotAllowedError'?'رفضت إذن الكاميرا · انتقلنا للفأرة':'الكاميرا غير متاحة · انتقلنا للفأرة');$('hint').textContent='لم تعمل الكاميرا؛ تحوّلنا تلقائياً إلى الفأرة. حرّك المؤشر، اضغط للجذب واتركه لإطلاق دفعة.'}}
 $('start').addEventListener('click',()=>startCamera());
@@ -169,7 +198,13 @@ function drawHand(hand,index){
 }
 function draw(now){if(paused){requestAnimationFrame(draw);return}if(now-lastFrame<33){requestAnimationFrame(draw);return}frame++;const dt=now-lastFrame;lastFrame=now;fpsSmooth=lerp(fpsSmooth,1000/Math.max(1,dt),.08);if(frame%12===0)$('fps').textContent=Math.round(fpsSmooth);
 ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-if(running&&handTask&&video.readyState>=2&&now-lastDetect>30&&video.currentTime!==lastVideoTime){lastDetect=now;lastVideoTime=video.currentTime;try{const res=handTask.detectForVideo(video,now);hands=(res.landmarks||[]).map(analyze);$('hands').textContent=hands.length;let label='—',hint='حرّك يديك لترى 250 خيطاً نيونياً زجاجياً يتبع شكل اليد والأصابع.';if(hands.some(h=>h.pinch)){label='ضمّ الأصابع';hint='ضم الإبهام والسبابة: تتجمع الخطوط وتلتف حول نقطة اللمس.'}else if(hands.length&&hands.every(h=>h.closed)){label='قبضة';hint='أغلقت يديك: تنهار مسارات الطاقة وتتجمع في المركز.'}else if(hands.length&&hands.some(h=>h.openness>.65)){label='كف مفتوح';hint='افتح كفك: تنتشر المسارات وتتوسع كموجة طاقة.'}else if(hands.length===2){label='يدان';hint='قرّب يديك أو أبعدهما لتغيير تمدد الشبكة بينهما.'}$('gesture').textContent=label;$('hint').textContent=hint;}catch(e){console.warn('hand tracking frame',e)}}
+if(running&&handTask&&video.readyState>=2&&now-lastDetect>30&&video.currentTime!==lastVideoTime){lastDetect=now;lastVideoTime=video.currentTime;try{const res=handTask.detectForVideo(video,now),rawHands=res.landmarks||[];
+ if(rawHands.length!==smoothHands.length){smoothHands.length=0;}
+ hands=rawHands.map((lm,index)=>{
+  if(!smoothHands[index])smoothHands[index]=lm.map(v=>({...v}));
+  else for(let j=0;j<lm.length;j++){const prev=smoothHands[index][j],cur=lm[j],move=Math.hypot(cur.x-prev.x,cur.y-prev.y);const follow=move>.055?.78:.42;prev.x=lerp(prev.x,cur.x,follow);prev.y=lerp(prev.y,cur.y,follow);prev.z=lerp(prev.z,cur.z||0,follow);}
+  return analyze(smoothHands[index]);
+ });$('hands').textContent=hands.length;let label='—',hint='حرّك يديك لترى 250 خيطاً نيونياً زجاجياً يتبع شكل اليد والأصابع.';if(hands.some(h=>h.pinch)){label='ضمّ الأصابع';hint='ضم الإبهام والسبابة: تتجمع الخطوط وتلتف حول نقطة اللمس.'}else if(hands.length&&hands.every(h=>h.closed)){label='قبضة';hint='أغلقت يديك: تنهار مسارات الطاقة وتتجمع في المركز.'}else if(hands.length&&hands.some(h=>h.openness>.65)){label='كف مفتوح';hint='افتح كفك: تنتشر المسارات وتتوسع كموجة طاقة.'}else if(hands.length===2){label='يدان';hint='قرّب يديك أو أبعدهما لتغيير تمدد الشبكة بينهما.'}$('gesture').textContent=label;$('hint').textContent=hint;}catch(e){console.warn('hand tracking frame',e)}}
 if(mouseMode){const idle=performance.now()-lastMouseMove;if(idle>1400){mouseSpeed=lerp(mouseSpeed,0,.035)}drawMouseEnergy(now)}
 tiltX=lerp(tiltX,targetTiltX,.08);tiltY=lerp(tiltY,targetTiltY,.08);
 if(!mouseMode){for(let i=0;i<hands.length;i++)drawHand(hands[i],i)}
